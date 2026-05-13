@@ -154,7 +154,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
                 case .photoVideo: keywords = ["photo", "camera", "editor", "صورة", "تصوير", "محرر"]
                 case .developer: keywords = ["developer", "utilities", "tool", "jailbreak", "مطور", "ادوات", "أدوات"]
                 case .lifestyle: keywords = ["lifestyle", "health", "fitness", "نمط", "حياة", "صحة"]
-                case .other: return true // نعرض كل ما تبقى أو يمكن تجاهل هذا الفلتر
+                case .other: return true 
                 }
                 
                 let searchSpace = [
@@ -312,68 +312,5 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		_sortedSectionTitles.firstIndex(of: title) ?? 0
 	}
 	
-	func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
-		let entry: (source: ASRepository, app: ASRepository.App)
-		switch sortOption {
-		case .default: entry = _sortedApps[indexPath.row]
-		case .name: entry = _groupedAppsByNameFirstLetter[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-		case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-		}
-		
-		return UIContextMenuConfiguration(
-			identifier: nil,
-			previewProvider: nil
-		) { _ in
-			let versionsMenu = UIMenu(
-				title: "نسخ روابط التحميل",
-				image: UIImage(systemName: "list.bullet"),
-				children: self._contextActions(for: entry.app, with: { version in
-					UIPasteboard.general.string = version?.absoluteString
-				}, image: UIImage(systemName: "doc.on.clipboard"))
-			)
-			
-			let downloadsMenu = UIMenu(
-				title: "الإصدارات السابقة",
-				image: UIImage(systemName: "square.and.arrow.down.on.square"),
-				children: self._contextActions(for: entry.app, with: { version in
-					if let url = version {
-						_ = DownloadManager.shared.startDownload(
-							from: url,
-							id: entry.app.currentUniqueId
-						)
-					}
-				}, image: UIImage(systemName: "arrow.down"))
-			)
-			
-			return UIMenu(children: [downloadsMenu, versionsMenu])
-		}
-	}
-	
-	// MARK: Actions
-	
-	private func _contextActions(
-		for app: ASRepository.App,
-		with action: @escaping (URL?) -> Void,
-		image: UIImage?
-	) -> [UIAction] {
-		if let versions = app.versions, !versions.isEmpty {
-			return versions.map { version in
-				UIAction(
-					title: version.version,
-					image: image
-				) { _ in
-					action(version.downloadURL)
-				}
-			}
-		} else {
-			return [
-				UIAction(
-					title: app.currentVersion ?? "",
-					image: image
-				) { _ in
-					action(app.currentDownloadUrl)
-				}
-			]
-		}
-	}
+    // تم حذف دالة contextMenuConfigurationForRowAt بالكامل لمنع ظهور قائمة النسخ والتنزيل عند الضغط مطولاً
 }}
