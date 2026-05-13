@@ -3,7 +3,7 @@
 //  SY STORE
 //
 //  Created by samara on 1.05.2025.
-//  Modified for SY STORE.
+//  Modified for SY STORE - Unified Store.
 //
 
 import SwiftUI
@@ -52,14 +52,6 @@ struct SourceAppsView: View {
 	@State var hasLoadedOnce = false
 	@State private var _searchText = ""
 
-	private var _navigationTitle: String {
-		if object.count == 1 {
-			return object[0].name ?? "غير معروف"
-		} else {
-			return "\(object.count) مصادر"
-		}
-	}
-	
 	var object: [AltSource]
 	@ObservedObject var viewModel: SourcesViewModel
 	@State private var _sources: [ASRepository]?
@@ -81,26 +73,15 @@ struct SourceAppsView: View {
 				)
 				.ignoresSafeArea()
 			} else {
-				ProgressView()
+				ProgressView("جاري تحميل التطبيقات...") // تعريب نص التحميل
 			}
 		}
-		.navigationTitle(_navigationTitle)
+        // تثبيت العنوان ليكون "التطبيقات" دائماً بدلاً من عرض عدد المصادر
+		.navigationTitle("التطبيقات")
 		.searchable(text: $_searchText, placement: .platform(), prompt: "ابحث في التطبيقات...")
-		.toolbarTitleMenu {
-			if
-				let _sources,
-				_sources.count == 1
-			{
-				if let url = _sources[0].website {
-					Button("زيارة الموقع", systemImage: "globe") {
-						UIApplication.open(url)
-					}
-				}
-			}
-		}
 		.toolbar {
 			NBToolbarMenu(
-				systemImage: "line.3.horizontal.decrease",
+				systemImage: "line.3.horizontal.decrease.circle", // أيقونة فلتر احترافية
 				style: .icon,
 				placement: .topBarTrailing
 			) {
@@ -196,8 +177,6 @@ extension SourceAppsView {
 		}
 	}
 }
-
-import SwiftUI
 
 extension View {
 	@ViewBuilder
