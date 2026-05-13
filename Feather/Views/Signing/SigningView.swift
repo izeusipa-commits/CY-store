@@ -1,8 +1,9 @@
 //
 //  SigningView.swift
-//  Feather
+//  SY STORE
 //
 //  Created by samara on 14.04.2025.
+//  Modified for SY STORE.
 //
 
 import SwiftUI
@@ -23,6 +24,9 @@ struct SigningView: View {
 	@State private var _selectedPhoto: PhotosPickerItem? = nil
 	@State var appIcon: UIImage?
 	
+    // متغير جديد خاص بتكرار التطبيقات
+    @State private var _duplicationCount: Int = 0
+    
 	// MARK: Fetch
 	@FetchRequest(
 		entity: CertificatePair.entity(),
@@ -45,18 +49,24 @@ struct SigningView: View {
 		
 	// MARK: Body
 	var body: some View {
-		NBNavigationView("", displayMode: .inline) {
+		NBNavigationView("توقيع التطبيق", displayMode: .inline) { // إضافة عنوان بدلاً من الشعار
 			Form {
 				_customizationOptions(for: app)
 				_cert()
 				_customizationProperties(for: app)
 				
-				// horrible
 				Rectangle()
 					.foregroundStyle(.clear)
 					.frame(height: 30)
 					.listRowBackground(EmptyView())
 			}
+            .scrollContentBackground(.hidden) // إخفاء خلفية القائمة الافتراضية
+            .background {
+                // إضافة التصميم الزجاجي (Glassy Effect)
+                Color.clear
+                    .background(.ultraThinMaterial)
+                    .ignoresSafeArea()
+            }
 			.overlay {
 				VStack(spacing: 0) {
 					Spacer()
@@ -67,7 +77,7 @@ struct SigningView: View {
 							Button {
 								_start()
 							} label: {
-								NBSheetButton(title: .localized("Start Signing"), style: .prominent)
+								NBSheetButton(title: "بدء التوقيع", style: .prominent)
 									.padding()
 							}
 							.buttonStyle(.plain)
@@ -76,22 +86,18 @@ struct SigningView: View {
 				}
 				.ignoresSafeArea(edges: .bottom)
 			}
-
 			.toolbar {
 				NBToolbarButton(role: .dismiss)
-				ToolbarItem(placement: .principal) {
-					Image("Glyph")
-						.resizable()
-						.scaledToFit()
-						.frame(height: 38)
-				}
+                // تمت إزالة شعار الريشة (Glyph) من هنا
 				NBToolbarButton(
-					.localized("Reset"),
+					"إعادة تعيين",
 					style: .text,
 					placement: .topBarTrailing
 				) {
 					_temporaryOptions = OptionsManager.shared.options
 					appIcon = nil
+                    _duplicationCount = 0 // تصفير العداد عند إعادة التعيين
+                    _updateBundleID()
 				}
 			}
 			.sheet(isPresented: $_isAltPickerPresenting) { SigningAlternativeIconView(app: app, appIcon: $appIcon, isModifing: .constant(true)) }
@@ -145,17 +151,27 @@ struct SigningView: View {
 			}
 		}
 	}
+    
+    // دالة لتحديث المعرّف بناءً على عدد التكرار
+    private func _updateBundleID() {
+        let baseBundle = app.identifier ?? "com.unknown.app"
+        if _duplicationCount > 0 {
+            _temporaryOptions.appIdentifier = "\(baseBundle)\(_duplicationCount)"
+        } else {
+            _temporaryOptions.appIdentifier = baseBundle
+        }
+    }
 }
 
 // MARK: - Extension: View
 extension SigningView {
 	@ViewBuilder
 	private func _customizationOptions(for app: AppInfoPresentable) -> some View {
-		NBSection(.localized("Customization")) {
+		NBSection("التخصيص") {
 			Menu {
-				Button(.localized("Select Alternative Icon"), systemImage: "app.dashed") { _isAltPickerPresenting = true }
-				Button(.localized("Choose from Files"), systemImage: "folder") { _isFilePickerPresenting = true }
-				Button(.localized("Choose from Photos"), systemImage: "photo") { _isImagePickerPresenting = true }
+				Button("اختيار أيقونة بديلة", systemImage: "app.dashed") { _isAltPickerPresenting = true }
+				Button("اختيار من الملفات", systemImage: "folder") { _isFilePickerPresenting = true }
+				Button("اختيار من الصور", systemImage: "photo") { _isImagePickerPresenting = true }
 			} label: {
 				if let icon = appIcon {
 					Image(uiImage: icon)
@@ -165,23 +181,62 @@ extension SigningView {
 				}
 			}
 			
-			_infoCell(.localized("Name"), desc: _temporaryOptions.appName ?? app.name) {
+			_infoCell("الاسم", desc: _temporaryOptions.appName ?? app.name) {
 				SigningPropertiesView(
-					title: .localized("Name"),
+					title: "الاسم",
 					initialValue: _temporaryOptions.appName ?? (app.name ?? ""),
 					bindingValue: $_temporaryOptions.appName
 				)
 			}
-			_infoCell(.localized("Identifier"), desc: _temporaryOptions.appIdentifier ?? app.identifier) {
+			_infoCell("المعرّف", desc: _temporaryOptions.appIdentifier ?? app.identifier) {
 				SigningPropertiesView(
-					title: .localized("Identifier"),
+					title: "المعرّف",
 					initialValue: _temporaryOptions.appIdentifier ?? (app.identifier ?? ""),
 					bindingValue: $_temporaryOptions.appIdentifier
 				)
 			}
-			_infoCell(.localized("Version"), desc: _temporaryOptions.appVersion ?? app.version) {
+            
+            // إضافة قسم التكرار الجديد تحت المعرّف
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("تكرار التطبيق")
+                    Spacer()
+                    Button(action: {
+                        if _duplicationCount > 0 {
+                            _duplicationCount -= 1
+                            _updateBundleID()
+                        }
+                    }) {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(_duplicationCount > 0 ? .red : .gray)
+                    }
+                    .buttonStyle(.borderless)
+
+                    Text("\(_duplicationCount)")
+                        .font(.headline)
+                        .frame(width: 30, alignment: .center)
+
+                    Button(action: {
+                        _duplicationCount += 1
+                        _updateBundleID()
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.accentColor)
+                    }
+                    .buttonStyle(.borderless)
+                }
+
+                Text("ملاحظة: اذا اردت تكرار التطبيق اضغط على +")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.vertical, 4)
+            
+			_infoCell("الإصدار", desc: _temporaryOptions.appVersion ?? app.version) {
 				SigningPropertiesView(
-					title: .localized("Version"),
+					title: "الإصدار",
 					initialValue: _temporaryOptions.appVersion ?? (app.version ?? ""),
 					bindingValue: $_temporaryOptions.appVersion
 				)
@@ -191,7 +246,7 @@ extension SigningView {
 	
 	@ViewBuilder
 	private func _cert() -> some View {
-		NBSection(.localized("Signing")) {
+		NBSection("التوقيع") {
 			if let cert = _selectedCert() {
 				NavigationLink {
 					CertificatesView(selectedCert: $_temporaryCertificate)
@@ -201,7 +256,7 @@ extension SigningView {
 					)
 				}
 			} else {
-				Text(.localized("No Certificate"))
+				Text("لا توجد شهادة")
 					.font(.footnote)
 					.foregroundColor(.disabled())
 			}
@@ -210,41 +265,41 @@ extension SigningView {
 	
 	@ViewBuilder
 	private func _customizationProperties(for app: AppInfoPresentable) -> some View {
-		NBSection(.localized("Advanced")) {
-			DisclosureGroup(.localized("Modify")) {
-				NavigationLink(.localized("Existing Dylibs")) {
+		NBSection("متقدم") {
+			DisclosureGroup("تعديل") {
+				NavigationLink("مكتبات Dylibs") {
 					SigningDylibView(
 						app: app,
 						options: $_temporaryOptions.optional()
 					)
 				}
 				
-				NavigationLink(.localized("Frameworks & PlugIns")) {
+				NavigationLink("الإطارات والإضافات") {
 					SigningFrameworksView(
 						app: app,
 						options: $_temporaryOptions.optional()
 					)
 				}
 				#if NIGHTLY || DEBUG
-					NavigationLink(.localized("Entitlements") + " (BETA)") {
+					NavigationLink("التصريحات (Entitlements)") {
 						SigningEntitlementsView(
 							bindingValue: $_temporaryOptions.appEntitlementsFile
 						)
 					}
 				#endif
-				NavigationLink(.localized("Tweaks")) {
+				NavigationLink("التعديلات (Tweaks)") {
 					SigningTweaksView(
 						options: $_temporaryOptions
 					)
 				}
 			}
 			
-			NavigationLink(.localized("Properties")) {
+			NavigationLink("الخصائص") {
 				Form { SigningOptionsView(
 					options: $_temporaryOptions,
 					temporaryOptions: _optionsManager.options
 				)}
-				.navigationTitle(.localized("Properties"))
+				.navigationTitle("الخصائص")
 			}
 		}
 	}
@@ -255,7 +310,7 @@ extension SigningView {
 			destination()
 		} label: {
 			LabeledContent(title) {
-				Text(desc ?? .localized("Unknown"))
+				Text(desc ?? "غير معروف")
 			}
 		}
 	}
@@ -268,8 +323,8 @@ extension SigningView {
 			_selectedCert() != nil || _temporaryOptions.signingOption != .default
 		else {
 			UIAlertController.showAlertWithOk(
-				title: .localized("No Certificate"),
-				message: .localized("Please go to settings and import a valid certificate"),
+				title: "لا توجد شهادة",
+				message: "يرجى الذهاب إلى الإعدادات واستيراد شهادة صالحة",
 				isCancel: true
 			)
 			return
@@ -286,12 +341,12 @@ extension SigningView {
 			certificate: _selectedCert()
 		) { error in
 			if let error {
-				let ok = UIAlertAction(title: .localized("Dismiss"), style: .cancel) { _ in
+				let ok = UIAlertAction(title: "إغلاق", style: .cancel) { _ in
 					dismiss()
 				}
 				
 				UIAlertController.showAlert(
-					title: "Error",
+					title: "خطأ",
 					message: error.localizedDescription,
 					actions: [ok]
 				)
@@ -305,7 +360,8 @@ extension SigningView {
 				
 				if _temporaryOptions.post_installAppAfterSigned {
 					DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-						NotificationCenter.default.post(name: Notification.Name("Feather.installApp"), object: nil)
+                        // تم تغيير الإشعار ليتوافق مع SY STORE
+						NotificationCenter.default.post(name: Notification.Name("SYStore.installApp"), object: nil)
 					}
 				}
 				dismiss()
