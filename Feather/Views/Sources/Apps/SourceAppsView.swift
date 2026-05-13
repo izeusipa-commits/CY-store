@@ -1,8 +1,9 @@
 //
 //  SourceAppsView.swift
-//  Feather
+//  SY STORE
 //
 //  Created by samara on 1.05.2025.
+//  Modified for SY STORE.
 //
 
 import SwiftUI
@@ -10,7 +11,7 @@ import AltSourceKit
 import NimbleViews
 import UIKit
 
-// MARK: - Extension: View (Enil)
+// MARK: - Extension: View (Enil & Categories)
 extension SourceAppsView {
 	enum SortOption: String, CaseIterable {
 		case `default` = "default"
@@ -19,21 +20,33 @@ extension SourceAppsView {
 		
 		var displayName: String {
 			switch self {
-			case .default:  .localized("Default")
-			case .name: 	.localized("Name")
-			case .date: 	.localized("Date")
+			case .default:  return "الافتراضي"
+			case .name: 	return "الاسم"
+			case .date: 	return "التاريخ"
 			}
 		}
 	}
+    
+    enum AppCategory: String, CaseIterable {
+        case all = "الكل"
+        case social = "اجتماعي"
+        case entertainment = "ترفيه"
+        case games = "ألعاب"
+        case photoVideo = "صورة فيديو"
+        case developer = "مطور"
+        case lifestyle = "نمط الحياة"
+        case other = "غير ذلك"
+    }
 }
 
 // MARK: - View
 struct SourceAppsView: View {
-	@AppStorage("Feather.sortOptionRawValue") private var _sortOptionRawValue: String = SortOption.default.rawValue
-	@AppStorage("Feather.sortAscending") private var _sortAscending: Bool = true
+	@AppStorage("SYStore.sortOptionRawValue") private var _sortOptionRawValue: String = SortOption.default.rawValue
+	@AppStorage("SYStore.sortAscending") private var _sortAscending: Bool = true
 	
 	@State private var _sortOption: SortOption = .default
 	@State private var _selectedRoute: SourceAppRoute?
+    @State private var _selectedCategory: AppCategory = .all // التصنيف المحدد
 	
 	@State var isLoading = true
 	@State var hasLoadedOnce = false
@@ -41,9 +54,9 @@ struct SourceAppsView: View {
 
 	private var _navigationTitle: String {
 		if object.count == 1 {
-			object[0].name ?? .localized("Unknown")
+			return object[0].name ?? "غير معروف"
 		} else {
-			.localized("%lld Sources", arguments: object.count)
+			return "\(object.count) مصادر"
 		}
 	}
 	
@@ -71,20 +84,14 @@ struct SourceAppsView: View {
 			}
 		}
 		.navigationTitle(_navigationTitle)
-		.searchable(text: $_searchText, placement: .platform())
+		.searchable(text: $_searchText, placement: .platform(), prompt: "ابحث في التطبيقات...")
 		.toolbarTitleMenu {
 			if
 				let _sources,
 				_sources.count == 1
 			{
 				if let url = _sources[0].website {
-					Button(.localized("Visit Website"), systemImage: "globe") {
-						UIApplication.open(url)
-					}
-				}
-				
-				if let url = _sources[0].patreonURL {
-					Button(.localized("Visit Patreon"), systemImage: "dollarsign.circle") {
+					Button("زيارة الموقع", systemImage: "globe") {
 						UIApplication.open(url)
 					}
 				}
@@ -92,11 +99,11 @@ struct SourceAppsView: View {
 			
 			Divider()
 			
-			Button(.localized("Copy"), systemImage: "doc.on.doc") {
+			Button("نسخ المصادر", systemImage: "doc.on.doc") {
 				guard !object.isEmpty else {
 					UIAlertController.showAlertWithOk(
-						title: .localized("Error"),
-						message: .localized("No sources to copy")
+						title: "خطأ",
+						message: "لا توجد مصادر لنسخها"
 					)
 					return
 				}
@@ -104,17 +111,20 @@ struct SourceAppsView: View {
 					$0.sourceURL!.absoluteString
 				}.joined(separator: "\n")
 				UIAlertController.showAlertWithOk(
-					title: .localized("Success"),
-					message: .localized("Sources copied to clipboard")
+					title: "نجاح",
+					message: "تم نسخ المصادر إلى الحافظة"
 				)
 			}
 		}
 		.toolbar {
+			// قائمة التصنيفات والفرز (كما في الصورة)
 			NBToolbarMenu(
 				systemImage: "line.3.horizontal.decrease",
 				style: .icon,
 				placement: .topBarTrailing
 			) {
+				_categoryActions()
+                Divider()
 				_sortActions()
 			}
 		}
@@ -155,11 +165,34 @@ struct SourceAppsView: View {
 	}
 }
 
-// MARK: - Extension: View (Sort)
+// MARK: - Extension: View (Sort & Category)
 extension SourceAppsView {
+    
+    // قائمة التصنيفات
+    @ViewBuilder
+    private func _categoryActions() -> some View {
+        Section("التصنيفات") {
+            ForEach(AppCategory.allCases, id: \.self) { category in
+                Button {
+                    _selectedCategory = category
+                    // ملاحظة: سيتم تطبيق الفلترة الفعلية لاحقاً داخل SourceAppsTableRepresentableView
+                } label: {
+                    HStack {
+                        Text(category.rawValue)
+                        Spacer()
+                        if _selectedCategory == category {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // قائمة الترتيب
 	@ViewBuilder
 	private func _sortActions() -> some View {
-		Section(.localized("Filter by")) {
+		Section("ترتيب حسب") {
 			ForEach(SortOption.allCases, id: \.displayName) { opt in
 				_sortButton(for: opt)
 			}
