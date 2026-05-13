@@ -1,8 +1,9 @@
 //
 //  SourceAppsDetailView.swift
-//  Feather
+//  SY STORE
 //
 //  Created by samsam on 7/25/25.
+//  Modified for SY STORE.
 //
 
 import SwiftUI
@@ -51,7 +52,7 @@ struct SourceAppsDetailView: View {
 							.font(.title2)
 							.fontWeight(.semibold)
 							.foregroundColor(.primary)
-						Text(app.currentDescription ?? .localized("An awesome application"))
+						Text(app.currentDescription ?? "تطبيق مميز") // تعريب الوصف الافتراضي
 							.font(.subheadline)
 							.foregroundColor(.secondary)
 						
@@ -68,90 +69,53 @@ struct SourceAppsDetailView: View {
 				Divider()
                 
 				if let screenshotURLs = app.screenshotURLs {
-					NBSection(.localized("Screenshots")) {
+					NBSection("الصور") {
 						_screenshots(screenshotURLs: screenshotURLs)
 					}
                     
 					Divider()
 				}
 				
-				if
-					let currentVer = app.currentVersion,
-					let whatsNewDesc = app.currentAppVersion?.localizedDescription
-				{
-					NBSection(.localized("What's New")) {
-						AppVersionInfo(
-							version: currentVer,
-							date: app.currentDate?.date,
-							description: whatsNewDesc
-						)
-						if let versions = app.versions {
-							NavigationLink(
-								destination: VersionHistoryView(app: app, versions: versions)
-									.navigationTitle(.localized("Version History"))
-									.navigationBarTitleDisplayMode(.large)
-							) {
-								Text(.localized("Version History"))
-							}
-						}
-					}
-					
-					Divider()
-				}
-				
-				if let appDesc = app.localizedDescription {
-					NBSection(.localized("Description")) {
-						VStack(alignment: .leading, spacing: 2) {
-							ExpandableText(text: appDesc, lineLimit: 3)
-						}
-						.frame(maxWidth: .infinity, alignment: .leading)
-					}
-					
-					Divider()
-				}
+                // تم إزالة قسم "ما الجديد" (What's New)
+                // تم إزالة قسم "الوصف" (Description)
                 
-				NBSection(.localized("Information")) {
+				NBSection("المعلومات") {
 					VStack(spacing: 12) {
-						if let sourceName = source.name {
-							_infoRow(title: .localized("Source"), value: sourceName)
-						}
-                        
-						if let developer = app.developer {
-							_infoRow(title: .localized("Developer"), value: developer)
-						}
+                        // تم إزالة صف "المصدر" (Source)
+                        // تم إزالة صف "المطور" (Developer)
 						
 						if let size = app.size {
-							_infoRow(title: .localized("Size"), value: size.formattedByteCount)
+							_infoRow(title: "الحجم", value: size.formattedByteCount)
 						}
 						
 						if let category = app.category {
-							_infoRow(title: .localized("Category"), value: category.capitalized)
+							_infoRow(title: "التصنيف", value: category.capitalized)
 						}
 						
 						if let version = app.currentVersion {
-							_infoRow(title: .localized("Version"), value: version)
+							_infoRow(title: "الإصدار", value: version)
 						}
 						
 						if let date = app.currentDate?.date {
-							_infoRow(title: .localized("Updated"), value: DateFormatter.localizedString(from: date, dateStyle: .medium, timeStyle: .none))
+							_infoRow(title: "تاريخ التحديث", value: DateFormatter.localizedString(from: date, dateStyle: .medium, timeStyle: .none))
 						}
 						
 						if let bundleId = app.id {
-							_infoRow(title: .localized("Identifier"), value: bundleId)
+							_infoRow(title: "المعرّف", value: bundleId)
 						}
 					}
 				}
 				
 				if let appPermissions = app.appPermissions {
-					NBSection(.localized("Permissions")) {
+					NBSection("الصلاحيات") {
 						Group {
 							if let entitlements = appPermissions.entitlements {
 								NBTitleWithSubtitleView(
-									title: .localized("Entitlements"),
+									title: "التصريحات",
 									subtitle: entitlements.map(\.name).joined(separator: "\n")
 								)
 							} else {
-								Text(.localized("No Entitlements listed."))
+								Text("لا توجد تصريحات مسجلة.")
 									.font(.subheadline)
 									.foregroundStyle(.secondary)
 							}
@@ -163,7 +127,7 @@ struct SourceAppsDetailView: View {
 									)
 								}
 							} else {
-								Text(.localized("No Privacy Permissions listed."))
+								Text("لا توجد صلاحيات خصوصية مسجلة.")
 									.font(.subheadline)
 									.foregroundStyle(.secondary)
 							}
@@ -194,10 +158,10 @@ struct SourceAppsDetailView: View {
 			) {
 				let sharedString = """
 				\(app.currentName) - \(app.currentVersion ?? "0")
-				\(app.currentDescription ?? .localized("An awesome application"))
+				\(app.currentDescription ?? "تطبيق مميز")
 				---
-				\(source.website?.absoluteString ?? source.name ?? "")
-				"""
+				تمت المشاركة من SY STORE
+				""" // تم إزالة رابط السورس من المشاركة للحفاظ على سرية المتجر
 				UIActivityViewController.show(activityItems: [sharedString])
 			}
 		}
