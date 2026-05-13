@@ -14,7 +14,7 @@
 	<array>
 		<dict>
 			<key>CFBundleTypeIconFile</key>
-			<string>feather_extension</string>
+			<string>AppIcon</string>
 			<key>CFBundleTypeName</key>
 			<string>iOS Package Archive</string>
 			<key>CFBundleTypeRole</key>
@@ -28,7 +28,7 @@
 		</dict>
 		<dict>
 			<key>CFBundleTypeIconFile</key>
-			<string>feather_extension</string>
+			<string>AppIcon</string>
 			<key>CFBundleTypeName</key>
 			<string>AirDrop friendly iOS app</string>
 			<key>CFBundleTypeRole</key>
@@ -43,63 +43,6 @@
 	</array>
 	<key>CFBundleIcons</key>
 	<dict>
-		<key>CFBundleAlternateIcons</key>
-		<dict>
-			<key>Donor</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Donor</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<false/>
-			</dict>
-			<key>V0</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>V0</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<false/>
-			</dict>
-			<key>V1</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>V1</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<false/>
-			</dict>
-			<key>V1Mac</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>V1Mac</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<false/>
-			</dict>
-			<key>V2Mac</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>V2Mac</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<false/>
-			</dict>
-			<key>Wing</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Wing</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<false/>
-			</dict>
-		</dict>
 		<key>CFBundlePrimaryIcon</key>
 		<dict>
 			<key>CFBundleIconFiles</key>
@@ -109,14 +52,25 @@
 			<key>UIPrerenderedIcon</key>
 			<false/>
 		</dict>
+        <key>CFBundleAlternateIcons</key>
+		<dict>
+            <!-- تم تنظيف الأيقونات البديلة لتقليل حجم التطبيق والتركيز على الهوية الجديدة -->
+			<key>V1</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>V1</string>
+				</array>
+				<key>UIPrerenderedIcon</key>
+				<false/>
+			</dict>
+		</dict>
 	</dict>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>CFBundleURLIconFile</key>
-			<string>feather_extension</string>
 			<key>CFBundleURLName</key>
 			<string>com.systore</string>
 			<key>CFBundleURLSchemes</key>
@@ -149,7 +103,7 @@
 			<key>UTTypeDescription</key>
 			<string>iOS Package Archive</string>
 			<key>UTTypeIconFile</key>
-			<string>feather_extension</string>
+			<string>AppIcon</string>
 			<key>UTTypeIcons</key>
 			<dict>
 				<key>UTTypeIconText</key>
@@ -179,7 +133,7 @@
 			<key>UTTypeDescription</key>
 			<string>AirDrop friendly iOS app</string>
 			<key>UTTypeIconFile</key>
-			<string>feather_extension</string>
+			<string>AppIcon</string>
 			<key>UTTypeIcons</key>
 			<dict>
 				<key>UTTypeIconBadgeName</key>
@@ -204,16 +158,8 @@
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>claration.dev</key>
-			<dict>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-				<key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-			</dict>
-		</dict>
-	</dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</Section>
 </dict>
 </plist>
