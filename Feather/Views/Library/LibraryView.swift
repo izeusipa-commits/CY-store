@@ -26,12 +26,10 @@ struct LibraryView: View {
 	@State private var _editMode: EditMode = .inactive
 	
 	@State private var _searchText = ""
-    // جعل "لم يتم التوقيع" هي الافتراضية عند فتح القسم
-	@State private var _selectedScope: Scope = .imported
+	@State private var _selectedScope: Scope = .imported // "لم يتم التوقيع" هي الافتراضية
 	
 	@Namespace private var _namespace
 	
-	// horror
 	private func filteredAndSortedApps<T>(from apps: FetchedResults<T>) -> [T] where T: NSManagedObject {
 		apps.filter {
 			_searchText.isEmpty ||
@@ -63,45 +61,51 @@ struct LibraryView: View {
 	// MARK: Body
 	var body: some View {
 		NBNavigationView("التوقيع") {
-			NBListAdaptable {
-                // عرض التطبيقات التي لم يتم توقيعها
-				if !_filteredImportedApps.isEmpty, _selectedScope == .imported {
-					Section {
-						ForEach(_filteredImportedApps, id: \.uuid) { app in
-							LibraryCellView(
-								app: app,
-								selectedInfoAppPresenting: $_selectedInfoAppPresenting,
-								selectedSigningAppPresenting: $_selectedSigningAppPresenting,
-								selectedInstallAppPresenting: $_selectedInstallAppPresenting,
-								selectedAppUUIDs: $_selectedAppUUIDs
-							)
-							.compatMatchedTransitionSource(id: app.uuid ?? "", ns: _namespace)
-						}
-					}
-				}
-                
-                // عرض التطبيقات الموقعة
-				if !_filteredSignedApps.isEmpty, _selectedScope == .signed {
-					Section {
-						ForEach(_filteredSignedApps, id: \.uuid) { app in
-							LibraryCellView(
-								app: app,
-								selectedInfoAppPresenting: $_selectedInfoAppPresenting,
-								selectedSigningAppPresenting: $_selectedSigningAppPresenting,
-								selectedInstallAppPresenting: $_selectedInstallAppPresenting,
-								selectedAppUUIDs: $_selectedAppUUIDs
-							)
-							.compatMatchedTransitionSource(id: app.uuid ?? "", ns: _namespace)
-						}
-					}
-				}
-			}
+            VStack(spacing: 0) {
+                // إظهار الأزرار العلوية بشكل ثابت
+                Picker("التصنيف", selection: $_selectedScope) {
+                    ForEach(Scope.allCases, id: \.self) { scope in
+                        Text(scope.displayName).tag(scope)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.top, 10)
+                .padding(.bottom, 5)
+
+                NBListAdaptable {
+                    if !_filteredImportedApps.isEmpty, _selectedScope == .imported {
+                        Section {
+                            ForEach(_filteredImportedApps, id: \.uuid) { app in
+                                LibraryCellView(
+                                    app: app,
+                                    selectedInfoAppPresenting: $_selectedInfoAppPresenting,
+                                    selectedSigningAppPresenting: $_selectedSigningAppPresenting,
+                                    selectedInstallAppPresenting: $_selectedInstallAppPresenting,
+                                    selectedAppUUIDs: $_selectedAppUUIDs
+                                )
+                                .compatMatchedTransitionSource(id: app.uuid ?? "", ns: _namespace)
+                            }
+                        }
+                    }
+                    
+                    if !_filteredSignedApps.isEmpty, _selectedScope == .signed {
+                        Section {
+                            ForEach(_filteredSignedApps, id: \.uuid) { app in
+                                LibraryCellView(
+                                    app: app,
+                                    selectedInfoAppPresenting: $_selectedInfoAppPresenting,
+                                    selectedSigningAppPresenting: $_selectedSigningAppPresenting,
+                                    selectedInstallAppPresenting: $_selectedInstallAppPresenting,
+                                    selectedAppUUIDs: $_selectedAppUUIDs
+                                )
+                                .compatMatchedTransitionSource(id: app.uuid ?? "", ns: _namespace)
+                            }
+                        }
+                    }
+                }
+            }
 			.searchable(text: $_searchText, placement: .platform(), prompt: "ابحث في التطبيقات...")
-			.compatSearchScopes($_selectedScope) {
-				ForEach(Scope.allCases, id: \.displayName) { scope in
-					Text(scope.displayName).tag(scope)
-				}
-			}
 			.scrollDismissesKeyboard(.interactively)
 			.overlay {
 				if
@@ -126,7 +130,6 @@ struct LibraryView: View {
 				}
 			}
 			.toolbar {
-                // زر "تعديل" (سيكون على اليمين في اللغة العربية)
 				ToolbarItem(placement: .topBarLeading) {
                     if _editMode.isEditing {
                         Button("تم", role: .cancel) {
@@ -137,7 +140,6 @@ struct LibraryView: View {
                     }
 				}
 				
-                // الأزرار على اليسار (سلة المهملات عند التعديل، أو أيقونات الاستيراد)
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     if _editMode.isEditing {
                         Button {
