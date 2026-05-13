@@ -61,21 +61,22 @@ struct LibraryCellView: View {
 				.buttonStyle(.borderless)
 			}
 			
-            // زر الأكشن (توقيع / تثبيت) يظهر في البداية كما في الصورة
-            if !isEditing {
-                _buttonActions(for: app)
-            }
+            // 1. الأيقونة أولاً (لتظهر على اليمين في اللغة العربية)
+            FRAppIconView(app: app, size: 57)
             
-            Spacer() // مسافة لدفع النصوص والأيقونة للطرف الآخر
-            
+            // 2. اسم ومعلومات التطبيق
 			NBTitleWithSubtitleView(
 				title: app.name ?? "غير معروف",
 				subtitle: _desc,
 				linelimit: 0
 			)
-            .multilineTextAlignment(.trailing) // محاذاة النص لليمين
             
-            FRAppIconView(app: app, size: 57)
+            Spacer() // دفع زر التوقيع لأقصى اليسار
+            
+            // 3. زر الأكشن (توقيع / تثبيت) يوضع في النهاية (ليظهر على اليسار)
+            if !isEditing {
+                _buttonActions(for: app)
+            }
 		}
 		.padding(isRegular ? 12 : 0)
 		.background(
@@ -114,7 +115,6 @@ struct LibraryCellView: View {
 		}
 	}
 }
-
 
 // MARK: - Extension: View
 extension LibraryCellView {
