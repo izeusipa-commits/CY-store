@@ -1,4 +1,4 @@
-name: Release
+name: Release SY STORE
 
 on:
   push:
@@ -20,9 +20,11 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Compile Feather
+      - name: Compile SY STORE
         run: | 
+          # تحديث رقم البناء بناءً على الـ Commit الحالي
           agvtool new-version -all $(git rev-parse HEAD)
+          # بدء عملية التجميع
           make
           mkdir upload
           mv packages/* upload/
@@ -30,13 +32,14 @@ jobs:
       - name: Extract Version
         id: get_version
         run: |
+          # إنشاء رقم إصدار يعتمد على التاريخ والـ Commit
           VERSION=$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Feather v${{ env.VERSION }}
+          name: SY STORE v${{ env.VERSION }}
           tag_name: v${{ env.VERSION }}
           files: |
             upload/*
