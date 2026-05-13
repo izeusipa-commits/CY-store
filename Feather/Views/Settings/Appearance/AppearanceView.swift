@@ -15,14 +15,25 @@ struct AppearanceView: View {
 	@AppStorage("Feather.userInterfaceStyle")
 	private var _userIntefacerStyle: Int = UIUserInterfaceStyle.unspecified.rawValue
 	
-    // تم تغيير اللون الافتراضي هنا ليتطابق مع الشعار الخاص بك (الأزرق السماوي المتوهج)
 	@AppStorage("Feather.userTintColor")
-	private var _selectedColorHex: String = "#16BFE0" 
+	private var _selectedColorHex: String = "#16BFE0"
 	
 	private var _tintColorBinding: Binding<Color> {
 		Binding(
 			get: { Color(hex: _selectedColorHex) },
-			set: { _selectedColorHex = $0.toHex() }
+			set: { newValue in
+				_selectedColorHex = newValue.toHex()
+				
+				// تطبيق اللون الجديد فوراً على كافة واجهات التطبيق
+				let uiColor = UIColor(newValue)
+				for scene in UIApplication.shared.connectedScenes {
+					if let windowScene = scene as? UIWindowScene {
+						for window in windowScene.windows {
+							window.tintColor = uiColor
+						}
+					}
+				}
+			}
 		)
 	}
 	
@@ -32,9 +43,9 @@ struct AppearanceView: View {
             // القسم الأول: خيارات المظهر (افتراضي، فاتح، داكن)
 			Section {
 				Picker("المظهر", selection: $_userIntefacerStyle) {
-                    Text("افتراضي").tag(UIUserInterfaceStyle.unspecified.rawValue)
-                    Text("فاتح").tag(UIUserInterfaceStyle.light.rawValue)
-                    Text("داكن").tag(UIUserInterfaceStyle.dark.rawValue)
+					Text("افتراضي").tag(UIUserInterfaceStyle.unspecified.rawValue)
+					Text("فاتح").tag(UIUserInterfaceStyle.light.rawValue)
+					Text("داكن").tag(UIUserInterfaceStyle.dark.rawValue)
 				}
 				.pickerStyle(.segmented)
 			}
@@ -49,8 +60,15 @@ struct AppearanceView: View {
 			}
 		}
 		.onChange(of: _userIntefacerStyle) { value in
+			// تطبيق الوضع الفاتح/الداكن فوراً على كافة النوافذ
 			if let style = UIUserInterfaceStyle(rawValue: value) {
-				UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
+				for scene in UIApplication.shared.connectedScenes {
+					if let windowScene = scene as? UIWindowScene {
+						for window in windowScene.windows {
+							window.overrideUserInterfaceStyle = style
+						}
+					}
+				}
 			}
 		}
 	}
