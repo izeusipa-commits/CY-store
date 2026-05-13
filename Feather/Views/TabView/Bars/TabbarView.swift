@@ -9,11 +9,13 @@
 import SwiftUI
 
 struct TabbarView: View {
-	@State private var selectedTab: TabEnum = .home // تم التعديل لتصبح الرئيسية هي الافتراضية
+	// تم التصحيح: تغيير القيمة الافتراضية من .sources (الملغية) إلى .home
+	@State private var selectedTab: TabEnum = .home 
 
 	var body: some View {
 		TabView(selection: $selectedTab) {
-			ForEach(TabEnum.defaultTabs, id: \.self) { tab in // تم تغيير .hashValue إلى .self لحل الخطأ
+			// تم التصحيح: استخدام \.self بدلاً من .hashValue لحل خطأ SelectionValue
+			ForEach(TabEnum.defaultTabs, id: \.self) { tab in
 				TabEnum.view(for: tab)
 					.tabItem {
 						Label(tab.title, systemImage: tab.icon)
