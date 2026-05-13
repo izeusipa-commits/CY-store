@@ -1,8 +1,9 @@
 //
 //  DownloadButtonView.swift
-//  Feather
+//  SY STORE
 //
 //  Created by samsam on 7/25/25.
+//  Modified for SY STORE.
 //
 
 import SwiftUI
@@ -44,13 +45,13 @@ struct DownloadButtonView: View {
 						_ = downloadManager.startDownload(from: url, id: app.currentUniqueId)
 					}
 				} label: {
-					Text(.localized("Get"))
+					Text("تنزيل") // تم التعريب إلى "تنزيل"
 						.lineLimit(0)
 						.font(.headline.bold())
-						.foregroundStyle(Color.accentColor)
-						.padding(.horizontal, 24)
+						.foregroundStyle(Color.accentColor) // لون النص أزرق احترافي
+						.padding(.horizontal, 22) // تعديل المسافة ليتناسب مع الكلمة العربية
 						.padding(.vertical, 6)
-						.background(Color(uiColor: .quaternarySystemFill))
+						.background(Color(uiColor: .tertiarySystemFill)) // خلفية مشابهة لمتجر آبل
 						.clipShape(Capsule())
 				}
 				.buttonStyle(.borderless)
