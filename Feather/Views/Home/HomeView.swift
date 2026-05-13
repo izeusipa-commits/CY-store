@@ -11,10 +11,11 @@ import AltSourceKit
 import NimbleViews
 
 struct HomeView: View {
+    @Environment(\.openURL) var openURL // إضافة بيئة فتح الروابط
     @StateObject var viewModel = SourcesViewModel.shared
     
     @State private var _recentApps: [(source: ASRepository, app: ASRepository.App)] = []
-    @State private var _banners: [StoreBanner] = [] // تخزين البنرات
+    @State private var _banners: [StoreBanner] = []
     @State private var _selectedRoute: SourceAppRoute?
     @State private var isLoading = true
 
@@ -48,35 +49,37 @@ struct HomeView: View {
                                 TabView {
                                     ForEach(_banners) { banner in
                                         Button {
-                                            if let link = banner.link, let url = URL(string: link) {
-                                                UIApplication.shared.open(url)
+                                            // فتح الرابط بشكل مباشر وموثوق
+                                            if let linkString = banner.link, let url = URL(string: linkString) {
+                                                openURL(url)
                                             }
                                         } label: {
-                                            AsyncImage(url: URL(string: banner.imageURL)) { phase in
-                                                if let image = phase.image {
-                                                    image
-                                                        .resizable()
-                                                        .aspectRatio(contentMode: .fill)
-                                                } else if phase.error != nil {
-                                                    Rectangle()
-                                                        .fill(Color(uiColor: .secondarySystemBackground))
-                                                        .overlay(Image(systemName: "photo").foregroundColor(.secondary))
-                                                } else {
-                                                    Rectangle()
-                                                        .fill(Color(uiColor: .secondarySystemBackground))
-                                                        .overlay(ProgressView())
+                                            // التحقق من وجود رابط الصورة
+                                            if let imgUrl = banner.imageURL, let url = URL(string: imgUrl) {
+                                                AsyncImage(url: url) { phase in
+                                                    if let image = phase.image {
+                                                        image
+                                                            .resizable()
+                                                            .aspectRatio(contentMode: .fill)
+                                                    } else if phase.error != nil {
+                                                        Rectangle()
+                                                            .fill(Color(uiColor: .secondarySystemBackground))
+                                                            .overlay(Image(systemName: "photo.fill").foregroundColor(.secondary))
+                                                    } else {
+                                                        Rectangle()
+                                                            .fill(Color(uiColor: .secondarySystemBackground))
+                                                            .overlay(ProgressView())
+                                                    }
                                                 }
+                                                .frame(height: 190)
+                                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                                .padding(.horizontal, 16)
                                             }
-                                            // أبعاد البنر ليتناسب مع الشاشة
-                                            .frame(height: 190)
-                                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                            .padding(.horizontal, 16)
                                         }
                                         .buttonStyle(.plain)
                                     }
                                 }
                                 .frame(height: 230)
-                                // هذه الخاصية هي التي تعطي تأثير السحب يميناً ويساراً مع النقاط السفلية
                                 .tabViewStyle(.page(indexDisplayMode: .always))
                                 .listRowInsets(EdgeInsets())
                                 .listRowBackground(Color.clear)
@@ -152,16 +155,22 @@ struct HomeView: View {
     private func _loadBanners() {
         Task {
             guard let url = URL(string: "https://raw.githubusercontent.com/ipa-black/void-repo/refs/heads/main/repo.json") else { return }
+            
+            // إجبار التطبيق على تجاهل الكاش لجلب أحدث التعديلات
+            var request = URLRequest(url: url)
+            request.cachePolicy = .reloadIgnoringLocalCacheData
+            
             do {
-                let (data, _) = try await URLSession.shared.data(from: url)
+                let (data, _) = try await URLSession.shared.data(for: request)
                 let response = try JSONDecoder().decode(RepoBannerResponse.self, from: data)
                 
                 DispatchQueue.main.async {
-                    // التعديل هنا: نأخذ أول بنرين فقط (prefix 2) لضمان عدم زيادة العدد عن اثنين
-                    self._banners = Array((response.banners ?? []).prefix(2))
+                    // تصفية البنرات التي لا تحتوي على صورة وتحديد العدد لـ 2 فقط
+                    let validBanners = (response.banners ?? []).filter { $0.imageURL != nil }
+                    self._banners = Array(validBanners.prefix(2))
                 }
             } catch {
-                print("فشل جلب البنرات: \(error.localizedDescription)")
+                print("فشل جلب البنرات: \(error)") // ستظهر تفاصيل الخطأ هنا في الـ Console
             }
         }
     }
@@ -169,9 +178,28 @@ struct HomeView: View {
 
 // MARK: - Supporting Types for Banners
 struct StoreBanner: Decodable, Identifiable {
-    var id: String { imageURL }
-    let imageURL: String
+    var id: String { imageURL ?? UUID().uuidString }
+    let imageURL: String?
     let link: String?
+    
+    // دعم قراءة المفاتيح بأسماء مختلفة لتجنب أخطاء JSON
+    enum CodingKeys: String, CodingKey {
+        case imageURL = "imageURL"
+        case imageUrl = "imageUrl"
+        case image = "image"
+        case link = "link"
+        case url = "url"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        imageURL = (try? container.decodeIfPresent(String.self, forKey: .imageURL)) ??
+                   (try? container.decodeIfPresent(String.self, forKey: .imageUrl)) ??
+                   (try? container.decodeIfPresent(String.self, forKey: .image))
+        
+        link = (try? container.decodeIfPresent(String.self, forKey: .link)) ??
+               (try? container.decodeIfPresent(String.self, forKey: .url))
+    }
 }
 
 struct RepoBannerResponse: Decodable {
