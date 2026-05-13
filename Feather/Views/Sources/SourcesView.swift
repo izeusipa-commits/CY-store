@@ -1,8 +1,9 @@
 //
 //  SourcesView.swift
-//  Feather
+//  SY STORE
 //
 //  Created by samara on 10.04.2025.
+//  Modified for SY STORE.
 //
 
 import CoreData
@@ -13,12 +14,7 @@ import NimbleViews
 // MARK: - View
 struct SourcesView: View {
 	@Environment(\.horizontalSizeClass) private var horizontalSizeClass
-	#if !NIGHTLY && !DEBUG
-		@AppStorage("Feather.shouldStar") private var _shouldStar: Int = 0
-	#endif
 	@StateObject var viewModel = SourcesViewModel.shared
-	@State private var _isAddingPresenting = false
-	@State private var _addingSourceLoading = false
 	@State private var _searchText = ""
 	
 	private var _filteredSources: [AltSource] {
@@ -33,7 +29,7 @@ struct SourcesView: View {
 	
 	// MARK: Body
 	var body: some View {
-		NBNavigationView(.localized("Sources")) {
+		NBNavigationView("المصادر") {
 			NBListAdaptable {
 				if !_filteredSources.isEmpty {
 					Section {
@@ -44,8 +40,8 @@ struct SourcesView: View {
 							HStack(spacing: 18) {
 								Image("Repositories").appIconStyle()
 								NBTitleWithSubtitleView(
-									title: .localized("All Repositories"),
-									subtitle: .localized("See all apps from your sources")
+									title: "جميع التطبيقات",
+									subtitle: "عرض جميع التطبيقات المتاحة في المتجر"
 								)
 							}
 							.padding(isRegular ? 12 : 0)
@@ -60,7 +56,7 @@ struct SourcesView: View {
 					}
 					
 					NBSection(
-						.localized("Repositories"),
+						"المكتبات",
 						secondary: _filteredSources.count.description
 					) {
 						ForEach(_filteredSources) { source in
@@ -74,61 +70,43 @@ struct SourcesView: View {
 					}
 				}
 			}
-			.searchable(text: $_searchText, placement: .platform())
+			.searchable(text: $_searchText, placement: .platform(), prompt: "ابحث في المتجر...")
 			.overlay {
 				if _filteredSources.isEmpty {
 					if #available(iOS 17, *) {
 						ContentUnavailableView {
-							Label(.localized("No Repositories"), systemImage: "globe.desk.fill")
+							Label("جاري تجهيز المتجر...", systemImage: "arrow.down.app.fill")
 						} description: {
-							Text(.localized("Get started by adding your first repository."))
+							Text("يرجى الانتظار بينما يتم تحميل التطبيقات الأساسية.")
 						} actions: {
-							Button {
-								_isAddingPresenting = true
-							} label: {
-								NBButton(.localized("Add Source"), style: .text)
-							}
+							ProgressView()
 						}
 					}
-				}
-			}
-			.toolbar {
-				NBToolbarButton(
-					systemImage: "plus",
-					style: .icon,
-					placement: .topBarTrailing,
-					isDisabled: _addingSourceLoading
-				) {
-					_isAddingPresenting = true
 				}
 			}
 			.refreshable {
 				await viewModel.fetchSources(_sources, refresh: true)
 			}
-			.sheet(isPresented: $_isAddingPresenting) {
-				SourcesAddView()
-			}
 		}
 		.task(id: Array(_sources)) {
 			await viewModel.fetchSources(_sources)
+            _importDefaultSources() // جلب المصادر الخاصة بالمتجر
 		}
-		#if !NIGHTLY && !DEBUG
-		.onAppear {
-				guard _shouldStar < 6 else { return }; _shouldStar += 1
-				guard _shouldStar == 6 else { return }
-			
-				let github = UIAlertAction(title: "GitHub", style: .default) { _ in
-					UIApplication.open("https://github.com/khcrysalis/Feather")
-				}
-			
-				let cancel = UIAlertAction(title: .localized("Dismiss"), style: .cancel)
-			
-				UIAlertController.showAlert(
-					title: .localized("Enjoying %@?", arguments: Bundle.main.name),
-					message: .localized("Go to our GitHub and give us a star!"),
-					actions: [github, cancel]
-				)
-			}
-		#endif
 	}
+    
+    // MARK: - دالة استيراد المصادر الحصرية
+    private func _importDefaultSources() {
+        let myStoreSources = [
+            "https://fastsign.dev/repo.json",
+            "https://repository.apptesters.org",
+            "https://raw.githubusercontent.com/ipa-black/void-repo/refs/heads/main/repo.json"
+        ]
+        
+        for source in myStoreSources {
+            let exists = _sources.contains { $0.sourceURL?.absoluteString.lowercased() == source.lowercased() }
+            if !exists {
+                FR.handleSource(source) { }
+            }
+        }
+    }
 }
