@@ -1,8 +1,9 @@
 //
-//  ContentView.swift
-//  Feather
+//  LibraryView.swift
+//  SY STORE
 //
 //  Created by samara on 10.04.2025.
+//  Modified for SY STORE.
 //
 
 import SwiftUI
@@ -26,7 +27,6 @@ struct LibraryView: View {
 	
 	@State private var _searchText = ""
 	@State private var _selectedScope: Scope = .all
-	
 	
 	@Namespace private var _namespace
 	
@@ -61,14 +61,14 @@ struct LibraryView: View {
 	
 	// MARK: Body
 	var body: some View {
-		NBNavigationView(.localized("Library")) {
+		NBNavigationView("التوقيع") { // تغيير اسم القسم إلى "التوقيع"
 			NBListAdaptable {
 				if
 					!_filteredSignedApps.isEmpty,
 					_selectedScope == .all || _selectedScope == .signed
 				{
 					NBSection(
-						.localized("Signed"),
+						"موقعة", // Signed
 						secondary: _filteredSignedApps.count.description
 					) {
 						ForEach(_filteredSignedApps, id: \.uuid) { app in
@@ -89,7 +89,7 @@ struct LibraryView: View {
 					_selectedScope == .all || _selectedScope == .imported
 				{
 					NBSection(
-						.localized("Imported"),
+						"مستوردة", // Imported
 						secondary: _filteredImportedApps.count.description
 					) {
 						ForEach(_filteredImportedApps, id: \.uuid) { app in
@@ -105,7 +105,7 @@ struct LibraryView: View {
 					}
 				}
 			}
-			.searchable(text: $_searchText, placement: .platform())
+			.searchable(text: $_searchText, placement: .platform(), prompt: "ابحث في التطبيقات...")
 			.compatSearchScopes($_selectedScope) {
 				ForEach(Scope.allCases, id: \.displayName) { scope in
 					Text(scope.displayName).tag(scope)
@@ -119,14 +119,14 @@ struct LibraryView: View {
 				{
 					if #available(iOS 17, *) {
 						ContentUnavailableView {
-							Label(.localized("No Apps"), systemImage: "questionmark.app.fill")
+							Label("لا توجد تطبيقات", systemImage: "signature")
 						} description: {
-							Text(.localized("Get started by importing your first IPA file."))
+							Text("ابدأ باستيراد ملف IPA لتتمكن من توقيعه وتثبيته.")
 						} actions: {
 							Menu {
 								_importActions()
 							} label: {
-								NBButton(.localized("Import"), style: .text)
+								NBButton("استيراد", style: .text)
 							}
 						}
 					}
@@ -139,7 +139,7 @@ struct LibraryView: View {
 				
 				if _editMode.isEditing {
 					NBToolbarButton(
-						.localized("Delete"),
+						"حذف",
 						systemImage: "trash",
 						isDisabled: _selectedAppUUIDs.isEmpty
 					) {
@@ -176,7 +176,7 @@ struct LibraryView: View {
 						guard !urls.isEmpty else { return }
 						
 						for url in urls {
-							let id = "FeatherManualDownload_\(UUID().uuidString)"
+							let id = "SYStoreManualDownload_\(UUID().uuidString)"
 							let dl = downloadManager.startArchive(from: url, id: id)
 							try? downloadManager.handlePachageFile(url: url, dl: dl)
 						}
@@ -184,19 +184,19 @@ struct LibraryView: View {
 				)
 				.ignoresSafeArea()
 			}
-			.alert(.localized("Import from URL"), isPresented: $_isDownloadingPresenting) {
-				TextField(.localized("URL"), text: $_alertDownloadString)
+			.alert("استيراد من رابط", isPresented: $_isDownloadingPresenting) {
+				TextField("الرابط (URL)", text: $_alertDownloadString)
 					.textInputAutocapitalization(.never)
-				Button(.localized("Cancel"), role: .cancel) {
+				Button("إلغاء", role: .cancel) {
 					_alertDownloadString = ""
 				}
-				Button(.localized("OK")) {
+				Button("استيراد") {
 					if let url = URL(string: _alertDownloadString) {
-						_ = downloadManager.startDownload(from: url, id: "FeatherManualDownload_\(UUID().uuidString)")
+						_ = downloadManager.startDownload(from: url, id: "SYStoreManualDownload_\(UUID().uuidString)")
 					}
 				}
 			}
-			.onReceive(NotificationCenter.default.publisher(for: Notification.Name("Feather.installApp"))) { _ in
+			.onReceive(NotificationCenter.default.publisher(for: Notification.Name("SYStore.installApp"))) { _ in
 				if let latest = _signedApps.first {
 					_selectedInstallAppPresenting = AnyApp(base: latest)
 				}
@@ -214,10 +214,10 @@ struct LibraryView: View {
 extension LibraryView {
 	@ViewBuilder
 	private func _importActions() -> some View {
-		Button(.localized("Import from Files"), systemImage: "folder") {
+		Button("استيراد من الملفات", systemImage: "folder") {
 			_isImportingPresenting = true
 		}
-		Button(.localized("Import from URL"), systemImage: "globe") {
+		Button("استيراد من رابط", systemImage: "globe") {
 			_isDownloadingPresenting = true
 		}
 	}
@@ -236,8 +236,6 @@ extension LibraryView {
 		}
 		
 		_selectedAppUUIDs.removeAll()
-		
-		// _editMode = .inactive
 	}
 	
 	private func _getAllApps() -> [AppInfoPresentable] {
@@ -264,9 +262,9 @@ extension LibraryView {
 		
 		var displayName: String {
 			switch self {
-			case .all: return .localized("All")
-			case .signed: return .localized("Signed")
-			case .imported: return .localized("Imported")
+			case .all: return "الكل"
+			case .signed: return "موقعة"
+			case .imported: return "مستوردة"
 			}
 		}
 	}
