@@ -35,53 +35,50 @@ struct SettingsView: View {
 
 	// MARK: Body
 	var body: some View {
-		NBNavigationView(.localized("Settings")) {
+		NBNavigationView("الإعدادات") {
 			Form {
 				_aboutSection()
                 
 				Section {
 					NavigationLink(destination: AppearanceView()) {
-						Label(.localized("Appearance"), systemImage: "paintbrush")
+						Label("المظهر", systemImage: "paintbrush")
 					}
 				}
                 
-				NBSection(.localized("Certificates")) {
-                    
+				NBSection("الشهادات") {
 					if let cert = selectedCertificate {
 						CertificatesCellView(cert: cert)
 					} else {
-						Text(.localized("No Certificate"))
+						Text("لا توجد شهادة")
 							.font(.footnote)
 							.foregroundColor(.disabled())
 					}
 					NavigationLink(destination: CertificatesView()) {
-						Label(.localized("Certificates"), systemImage: "checkmark.seal")
+						Label("الشهادات", systemImage: "checkmark.seal")
 					}
                  
 				} footer: {
-					Text(.localized("Add and manage certificates used for signing applications."))
+					Text("أضف وأدر الشهادات المستخدمة لتوقيع التطبيقات.")
 				}
                 
-				NBSection(.localized("Features")) {
+				NBSection("الميزات") {
 					NavigationLink(destination: ConfigurationView()) {
-						Label(.localized("Signing Options"), systemImage: "signature")
+						Label("خيارات التوقيع", systemImage: "signature")
 					}
-					NavigationLink(destination: ArchiveView()) {
-						Label(.localized("Archive & Compression"), systemImage: "archivebox")
-					}
+                    // تم إزالة خيار "الضغط والأرشفة" من هنا بناءً على طلبك
 					NavigationLink(destination: InstallationView()) {
-						Label(.localized("Installation"), systemImage: "arrow.down.circle")
+						Label("التثبيت", systemImage: "arrow.down.circle")
 					}
 				} footer: {
-					Text(.localized("Configure the apps way of installing, its zip compression levels, and custom modifications to apps."))
+					Text("تكوين طريقة التثبيت والتعديلات المخصصة على التطبيقات.")
 				}
                 
 				Section {
 					NavigationLink(destination: ResetView()) {
-						Label(.localized("Reset"), systemImage: "trash")
+						Label("إعادة تعيين", systemImage: "trash")
 					}
 				} footer: {
-					Text(.localized("Reset the applications sources, certificates, apps, and general contents."))
+					Text("إعادة تعيين الشهادات والتطبيقات والمحتويات العامة.")
 				}
 			}
 		}
@@ -95,7 +92,7 @@ extension SettingsView {
 		Section {
 			NavigationLink(destination: AboutView()) {
 				Label {
-					Text(verbatim: .localized("About %@", arguments: Bundle.main.name))
+					Text("حول التطبيق")
 				} icon: {
 					FRAppIconView(size: 23)
 				}
