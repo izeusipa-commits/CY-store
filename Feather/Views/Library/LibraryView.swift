@@ -19,14 +19,15 @@ struct LibraryView: View {
 	@State private var _selectedInstallAppPresenting: AnyApp?
 	@State private var _isImportingPresenting = false
 	@State private var _isDownloadingPresenting = false
-	@State private var _alertDownloadString: String = "" // for _isDownloadingPresenting
+	@State private var _alertDownloadString: String = ""
 	
 	// MARK: Selection State
 	@State private var _selectedAppUUIDs: Set<String> = []
 	@State private var _editMode: EditMode = .inactive
 	
 	@State private var _searchText = ""
-	@State private var _selectedScope: Scope = .all
+    // جعل "لم يتم التوقيع" هي الافتراضية عند فتح القسم
+	@State private var _selectedScope: Scope = .imported
 	
 	@Namespace private var _namespace
 	
@@ -61,17 +62,12 @@ struct LibraryView: View {
 	
 	// MARK: Body
 	var body: some View {
-		NBNavigationView("التوقيع") { // تغيير اسم القسم إلى "التوقيع"
+		NBNavigationView("التوقيع") {
 			NBListAdaptable {
-				if
-					!_filteredSignedApps.isEmpty,
-					_selectedScope == .all || _selectedScope == .signed
-				{
-					NBSection(
-						"موقعة", // Signed
-						secondary: _filteredSignedApps.count.description
-					) {
-						ForEach(_filteredSignedApps, id: \.uuid) { app in
+                // عرض التطبيقات التي لم يتم توقيعها
+				if !_filteredImportedApps.isEmpty, _selectedScope == .imported {
+					Section {
+						ForEach(_filteredImportedApps, id: \.uuid) { app in
 							LibraryCellView(
 								app: app,
 								selectedInfoAppPresenting: $_selectedInfoAppPresenting,
@@ -83,16 +79,11 @@ struct LibraryView: View {
 						}
 					}
 				}
-				
-				if
-					!_filteredImportedApps.isEmpty,
-					_selectedScope == .all || _selectedScope == .imported
-				{
-					NBSection(
-						"مستوردة", // Imported
-						secondary: _filteredImportedApps.count.description
-					) {
-						ForEach(_filteredImportedApps, id: \.uuid) { app in
+                
+                // عرض التطبيقات الموقعة
+				if !_filteredSignedApps.isEmpty, _selectedScope == .signed {
+					Section {
+						ForEach(_filteredSignedApps, id: \.uuid) { app in
 							LibraryCellView(
 								app: app,
 								selectedInfoAppPresenting: $_selectedInfoAppPresenting,
@@ -114,8 +105,8 @@ struct LibraryView: View {
 			.scrollDismissesKeyboard(.interactively)
 			.overlay {
 				if
-					_filteredSignedApps.isEmpty,
-					_filteredImportedApps.isEmpty
+					(_selectedScope == .signed && _filteredSignedApps.isEmpty) ||
+					(_selectedScope == .imported && _filteredImportedApps.isEmpty)
 				{
 					if #available(iOS 17, *) {
 						ContentUnavailableView {
@@ -123,37 +114,57 @@ struct LibraryView: View {
 						} description: {
 							Text("ابدأ باستيراد ملف IPA لتتمكن من توقيعه وتثبيته.")
 						} actions: {
-							Menu {
-								_importActions()
-							} label: {
-								NBButton("استيراد", style: .text)
-							}
+                            HStack(spacing: 16) {
+                                Button {
+                                    _isImportingPresenting = true
+                                } label: {
+                                    NBButton("استيراد من الملفات", style: .text)
+                                }
+                            }
 						}
 					}
 				}
 			}
 			.toolbar {
+                // زر "تعديل" (سيكون على اليمين في اللغة العربية)
 				ToolbarItem(placement: .topBarLeading) {
-					EditButton()
+                    if _editMode.isEditing {
+                        Button("تم", role: .cancel) {
+                            _editMode = .inactive
+                        }
+                    } else {
+                        EditButton()
+                    }
 				}
 				
-				if _editMode.isEditing {
-					NBToolbarButton(
-						"حذف",
-						systemImage: "trash",
-						isDisabled: _selectedAppUUIDs.isEmpty
-					) {
-						_bulkDeleteSelectedApps()
-					}
-				} else {
-					NBToolbarMenu(
-						systemImage: "plus",
-						style: .icon,
-						placement: .topBarTrailing
-					) {
-						_importActions()
-					}
-				}
+                // الأزرار على اليسار (سلة المهملات عند التعديل، أو أيقونات الاستيراد)
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    if _editMode.isEditing {
+                        Button {
+                            _bulkDeleteSelectedApps()
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundColor(_selectedAppUUIDs.isEmpty ? .gray : .red)
+                        }
+                        .disabled(_selectedAppUUIDs.isEmpty)
+                    } else {
+                        Button {
+                            _isImportingPresenting = true
+                        } label: {
+                            Image(systemName: "folder.badge.plus")
+                                .font(.body.bold())
+                                .foregroundColor(.primary)
+                        }
+                        
+                        Button {
+                            _isDownloadingPresenting = true
+                        } label: {
+                            Image(systemName: "link")
+                                .font(.body.bold())
+                                .foregroundColor(.primary)
+                        }
+                    }
+                }
 			}
 			.environment(\.editMode, $_editMode)
 			.sheet(item: $_selectedInfoAppPresenting) { app in
@@ -210,19 +221,6 @@ struct LibraryView: View {
 	}
 }
 
-// MARK: - Extension: View
-extension LibraryView {
-	@ViewBuilder
-	private func _importActions() -> some View {
-		Button("استيراد من الملفات", systemImage: "folder") {
-			_isImportingPresenting = true
-		}
-		Button("استيراد من رابط", systemImage: "globe") {
-			_isDownloadingPresenting = true
-		}
-	}
-}
-
 // MARK: - Extension: Bulk Delete
 extension LibraryView {
 	private func _bulkDeleteSelectedApps() {
@@ -236,16 +234,17 @@ extension LibraryView {
 		}
 		
 		_selectedAppUUIDs.removeAll()
+        _editMode = .inactive
 	}
 	
 	private func _getAllApps() -> [AppInfoPresentable] {
 		var allApps: [AppInfoPresentable] = []
 		
-		if _selectedScope == .all || _selectedScope == .signed {
+		if _selectedScope == .signed {
 			allApps.append(contentsOf: _filteredSignedApps)
 		}
 		
-		if _selectedScope == .all || _selectedScope == .imported {
+		if _selectedScope == .imported {
 			allApps.append(contentsOf: _filteredImportedApps)
 		}
 		
@@ -256,15 +255,13 @@ extension LibraryView {
 // MARK: - Extension: View (Sort)
 extension LibraryView {
 	enum Scope: CaseIterable {
-		case all
-		case signed
 		case imported
+		case signed
 		
 		var displayName: String {
 			switch self {
-			case .all: return "الكل"
-			case .signed: return "موقعة"
-			case .imported: return "مستوردة"
+			case .imported: return "لم يتم التوقيع"
+			case .signed: return "موقّعة"
 			}
 		}
 	}
