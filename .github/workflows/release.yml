@@ -16,8 +16,9 @@ jobs:
           submodules: 'true'
 
       - name: Select Xcode
-        run: |
-          sudo xcode-select -s /Applications/Xcode_26.3.0.app
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       - name: Compile Feather
         run: | 
@@ -29,7 +30,7 @@ jobs:
       - name: Extract Version
         id: get_version
         run: |
-          VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" _build/Payload/*.app/Info.plist)
+          VERSION=$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Create Release
@@ -43,4 +44,4 @@ jobs:
           fail_on_unmatched_files: true
           draft: true
         env:
-          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
