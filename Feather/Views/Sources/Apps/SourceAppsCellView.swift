@@ -26,17 +26,7 @@ struct SourceAppsCellView: View {
 					subtitle: Self.appDescription(app: app),
 					iconUrl: app.iconURL
 				)
-				.overlay(alignment: .bottomTrailing) {
-					if let iconURL = source.currentIconURL {
-						LazyImage(url: iconURL) { state in
-							if let image = state.image {
-								image
-									.appIconStyle(size: 20, isCircle: true, background: Color(uiColor: .secondarySystemBackground))
-									.offset(x: -41, y: 4)
-							}
-						}
-					}
-				}
+                // تم حذف كود الصورة الصغيرة (overlay) من هنا لتصبح الأيقونة نظيفة تماماً
                 
                 Spacer() // دفع زر التنزيل لليسار
                 
