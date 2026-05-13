@@ -3,6 +3,7 @@
 //  SY STORE
 //
 //  Created by samara on 13.05.2026.
+//  Modified for SY STORE - Native Banners.
 //
 
 import SwiftUI
@@ -11,11 +12,12 @@ import AltSourceKit
 import NimbleViews
 
 struct HomeView: View {
-    @Environment(\.openURL) var openURL // إضافة بيئة فتح الروابط
+    @Environment(\.openURL) var openURL
     @StateObject var viewModel = SourcesViewModel.shared
     
+    @State private var _allApps: [(source: ASRepository, app: ASRepository.App)] = []
     @State private var _recentApps: [(source: ASRepository, app: ASRepository.App)] = []
-    @State private var _banners: [StoreBanner] = []
+    @State private var _banners: [ASRepository.News] = [] // قراءة البنرات الأصلية للمتجر
     @State private var _selectedRoute: SourceAppRoute?
     @State private var isLoading = true
 
@@ -47,16 +49,22 @@ struct HomeView: View {
                         if !_banners.isEmpty {
                             Section {
                                 TabView {
-                                    ForEach(_banners) { banner in
+                                    ForEach(_banners.indices, id: \.self) { index in
+                                        let banner = _banners[index]
+                                        
                                         Button {
-                                            // فتح الرابط بشكل مباشر وموثوق
-                                            if let linkString = banner.link, let url = URL(string: linkString) {
+                                            // 1. إذا كان البنر يحتوي على رابط، افتحه
+                                            if let url = banner.url {
                                                 openURL(url)
+                                            } 
+                                            // 2. إذا كان البنر يوجه لتطبيق معين داخل المتجر، افتح التطبيق
+                                            else if let appID = banner.appID,
+                                                    let targetApp = _allApps.first(where: { $0.app.id == appID }) {
+                                                _selectedRoute = SourceAppRoute(source: targetApp.source, app: targetApp.app)
                                             }
                                         } label: {
-                                            // التحقق من وجود رابط الصورة
-                                            if let imgUrl = banner.imageURL, let url = URL(string: imgUrl) {
-                                                AsyncImage(url: url) { phase in
+                                            if let imgUrl = banner.imageURL {
+                                                AsyncImage(url: imgUrl) { phase in
                                                     if let image = phase.image {
                                                         image
                                                             .resizable()
@@ -114,96 +122,54 @@ struct HomeView: View {
             }
             .refreshable {
                 await viewModel.fetchSources(_sources, refresh: true)
-                _loadRecentApps()
-                _loadBanners()
+                _loadData()
             }
         }
         .task(id: Array(_sources)) {
             await viewModel.fetchSources(_sources)
-            _loadRecentApps()
-            _loadBanners()
+            _loadData()
         }
     }
 
-    // MARK: - جلب أحدث التطبيقات
-    private func _loadRecentApps() {
+    // MARK: - جلب البيانات (التطبيقات والبنرات) معاً
+    private func _loadData() {
         isLoading = true
         Task {
             let loadedSources = _sources.compactMap { viewModel.sources[$0] }
+            
             var allApps: [(source: ASRepository, app: ASRepository.App)] = []
+            var allBanners: [ASRepository.News] = []
 
             for source in loadedSources {
+                // جلب التطبيقات
                 for app in source.apps {
                     allApps.append((source: source, app: app))
                 }
+                
+                // جلب البنرات الأصلية للسورس (News)
+                if let news = source.news {
+                    allBanners.append(contentsOf: news)
+                }
             }
 
+            // ترتيب التطبيقات حسب التاريخ
             allApps.sort {
                 ($0.app.currentDate?.date ?? .distantPast) > ($1.app.currentDate?.date ?? .distantPast)
             }
 
             let topApps = Array(allApps.prefix(25))
+            
+            // تصفية البنرات التي تحتوي على صور فقط
+            let validBanners = allBanners.filter { $0.imageURL != nil }
 
             DispatchQueue.main.async {
+                self._allApps = allApps
                 self._recentApps = topApps
+                self._banners = validBanners
                 self.isLoading = false
             }
         }
     }
-    
-    // MARK: - جلب البنرات الإعلانية من السورس
-    private func _loadBanners() {
-        Task {
-            guard let url = URL(string: "https://raw.githubusercontent.com/ipa-black/void-repo/refs/heads/main/repo.json") else { return }
-            
-            // إجبار التطبيق على تجاهل الكاش لجلب أحدث التعديلات
-            var request = URLRequest(url: url)
-            request.cachePolicy = .reloadIgnoringLocalCacheData
-            
-            do {
-                let (data, _) = try await URLSession.shared.data(for: request)
-                let response = try JSONDecoder().decode(RepoBannerResponse.self, from: data)
-                
-                DispatchQueue.main.async {
-                    // تصفية البنرات التي لا تحتوي على صورة وتحديد العدد لـ 2 فقط
-                    let validBanners = (response.banners ?? []).filter { $0.imageURL != nil }
-                    self._banners = Array(validBanners.prefix(2))
-                }
-            } catch {
-                print("فشل جلب البنرات: \(error)") // ستظهر تفاصيل الخطأ هنا في الـ Console
-            }
-        }
-    }
-}
-
-// MARK: - Supporting Types for Banners
-struct StoreBanner: Decodable, Identifiable {
-    var id: String { imageURL ?? UUID().uuidString }
-    let imageURL: String?
-    let link: String?
-    
-    // دعم قراءة المفاتيح بأسماء مختلفة لتجنب أخطاء JSON
-    enum CodingKeys: String, CodingKey {
-        case imageURL = "imageURL"
-        case imageUrl = "imageUrl"
-        case image = "image"
-        case link = "link"
-        case url = "url"
-    }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        imageURL = (try? container.decodeIfPresent(String.self, forKey: .imageURL)) ??
-                   (try? container.decodeIfPresent(String.self, forKey: .imageUrl)) ??
-                   (try? container.decodeIfPresent(String.self, forKey: .image))
-        
-        link = (try? container.decodeIfPresent(String.self, forKey: .link)) ??
-               (try? container.decodeIfPresent(String.self, forKey: .url))
-    }
-}
-
-struct RepoBannerResponse: Decodable {
-    let banners: [StoreBanner]?
 }
 
 // MARK: - Supporting Types
