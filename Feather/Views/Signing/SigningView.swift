@@ -21,7 +21,7 @@ struct SigningView: View {
 	@State private var _isFilePickerPresenting = false
 	@State private var _isImagePickerPresenting = false
 	@State private var _isSigning = false
-	@State private var _selectedPhoto: PhotosPickerItem? = nil
+	
 	@State var appIcon: UIImage?
 	
     // متغير جديد خاص بتكرار التطبيقات
@@ -60,7 +60,7 @@ struct SigningView: View {
 					.frame(height: 30)
 					.listRowBackground(EmptyView())
 			}
-            .scrollContentBackground(.hidden) 
+            .safeScrollContentBackground() // توافق iOS 15
             .background {
                 Color.clear
                     .background(.ultraThinMaterial)
@@ -109,17 +109,7 @@ struct SigningView: View {
 				)
 				.ignoresSafeArea()
 			}
-			.photosPicker(isPresented: $_isImagePickerPresenting, selection: $_selectedPhoto)
-			.onChange(of: _selectedPhoto) { newValue in
-				guard let newValue else { return }
-				
-				Task {
-					if let data = try? await newValue.loadTransferable(type: Data.self),
-					   let image = UIImage(data: data)?.resizeToSquare() {
-						appIcon = image
-					}
-				}
-			}
+            .safePhotosPicker(isPresented: $_isImagePickerPresenting, appIcon: $appIcon) // توافق iOS 15
 			.disabled(_isSigning)
 			.animation(.smooth, value: _isSigning)
 		}
@@ -172,7 +162,7 @@ extension SigningView {
 			} label: {
 				if let icon = appIcon {
 					Image(uiImage: icon)
-						.appIconStyle()
+						.appIconStyle(size: 48)
 				} else {
 					FRAppIconView(app: app, size: 48) // تم تصغير الحجم هنا من 56 إلى 48
 				}
@@ -310,9 +300,13 @@ extension SigningView {
 		NavigationLink {
 			destination()
 		} label: {
-			LabeledContent(title) {
-				Text(desc ?? "غير معروف")
-			}
+            // توافق LabeledContent مع iOS 15
+            HStack {
+                Text(title)
+                Spacer()
+                Text(desc ?? "غير معروف")
+                    .foregroundColor(.secondary)
+            }
 		}
 	}
 }
@@ -368,4 +362,54 @@ extension SigningView {
 			}
 		}
 	}
+}
+
+// MARK: - Compatibility Extensions
+private extension View {
+    @ViewBuilder
+    func safeScrollContentBackground() -> some View {
+        if #available(iOS 16.0, *) {
+            self.scrollContentBackground(.hidden)
+        } else {
+            self
+        }
+    }
+    
+    @ViewBuilder
+    func safePhotosPicker(isPresented: Binding<Bool>, appIcon: Binding<UIImage?>) -> some View {
+        if #available(iOS 16.0, *) {
+            // استخدام Wrapper للـ PhotosPicker في iOS 16 لحل مشكلة النوع المفقود
+            self.modifier(PhotosPickerModifier(isPresented: isPresented, appIcon: appIcon))
+        } else {
+            // في iOS 15 نكتفي بإخفاء الواجهة أو توجيه المستخدم لطريقة أخرى
+            self.sheet(isPresented: isPresented) {
+                Text("اختيار الصور مدعوم في iOS 16 وما فوق. يرجى اختيار 'من الملفات'")
+                    .padding()
+            }
+        }
+    }
+}
+
+// Modifier مخصص لعزل أكواد PhotosPickerItem الخاصة بـ iOS 16
+@available(iOS 16.0, *)
+private struct PhotosPickerModifier: ViewModifier {
+    @Binding var isPresented: Bool
+    @Binding var appIcon: UIImage?
+    @State private var selectedItem: PhotosPickerItem?
+    
+    func body(content: Content) -> some View {
+        content
+            .photosPicker(isPresented: $isPresented, selection: $selectedItem)
+            .onChange(of: selectedItem) { newValue in
+                guard let newValue else { return }
+                Task {
+                    if let data = try? await newValue.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data)?.resizeToSquare() {
+                        DispatchQueue.main.async {
+                            appIcon = image
+                        }
+                    }
+                }
+            }
+    }
 }
