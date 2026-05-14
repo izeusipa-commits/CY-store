@@ -50,7 +50,7 @@ struct SourcesAddView: View {
 		"https://stikdebug.xyz/index.json",
 		"https://apps.manicemu.site/altstore",
 		"https://alt.crystall1ne.dev"
-	].map { URL(string: $0)! }
+	].compactMap { URL(string: $0) }
 	
 	@State private var _isImporting = false
 	@State private var _sourceURL = ""
@@ -123,7 +123,7 @@ struct SourcesAddView: View {
 									}
 								} label: {
 									Text(.localized("Add"))
-                                        .font(.subheadline.bold())
+                                        .font(.subheadline.weight(.bold))
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
                                         .background(Color.accentColor.opacity(0.1))
@@ -137,7 +137,6 @@ struct SourcesAddView: View {
 					}
 				}
 			}
-            // استخدام دالة مخصصة لحل مشكلة buildIf في الـ toolbar لـ iOS 15
             .safeAddSourceToolbar(
                 isImporting: _isImporting,
                 sourceURL: _sourceURL,
@@ -159,29 +158,6 @@ struct SourcesAddView: View {
 		await MainActor.run {
 			recommendedSourcesData = fetched
 			_refreshFilteredRecommendedSourcesData()
-		}
-	}
-	
-	private func _fetchImportedRepositories(
-		_ code: String?,
-		competion: @escaping () -> Void
-	) {
-		guard let code else { return }
-		
-		let handler = ASDeobfuscator(with: code)
-		let repoUrls = handler.decode().compactMap { URL(string: $0) }
-		guard !repoUrls.isEmpty else { return }
-		
-		Task {
-			let fetched = await _concurrentFetchRepositories(from: repoUrls)
-			
-			let dict = Dictionary(fetched, uniquingKeysWith: { first, _ in first })
-
-			await MainActor.run {
-				Storage.shared.addSources(repos: dict) { _ in
-					competion()
-				}
-			}
 		}
 	}
 	
