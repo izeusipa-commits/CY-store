@@ -195,8 +195,7 @@ struct SourcesAddView: View {
 			for url in urls {
 				group.addTask {
 					await withCheckedContinuation { continuation in
-                        // تم إزالة <ASRepository> هنا لحل تحذير الـ Warning
-						dataService.fetch(from: url) { (result: RepositoryDataHandler) in
+						dataService.fetch<ASRepository>(from: url) { (result: RepositoryDataHandler) in
 							switch result {
 							case .success(let repo):
 								Task { @MainActor in
@@ -215,7 +214,6 @@ struct SourcesAddView: View {
 		
 		return results
 	}
-
 }
 
 // MARK: - Compatibility Extensions
@@ -223,21 +221,25 @@ private extension View {
     @ViewBuilder
     func safeAddSourceToolbar(isImporting: Bool, sourceURL: String, saveAction: @escaping () -> Void) -> some View {
         self.toolbar {
-            // تم إزالة ToolbarItem لأن NBToolbarButton يتكفل بمكانه تلقائياً
-            NBToolbarButton(role: .cancel)
+            ToolbarItem(placement: .navigationBarLeading) {
+                NBToolbarButton(role: .cancel)
+            }
             
-            if !isImporting {
-                NBToolbarButton(
-                    .localized("Save"),
-                    style: .text,
-                    placement: .navigationBarTrailing,
-                    isDisabled: sourceURL.isEmpty
-                ) {
-                    saveAction()
-                }
-            } else {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    ProgressView()
+            ToolbarItem(placement: .navigationBarTrailing) {
+                // 🔥 تم إضافة HStack هنا لحل مشكلة buildEither الخاصة بـ iOS 15
+                HStack {
+                    if !isImporting {
+                        NBToolbarButton(
+                            .localized("Save"),
+                            style: .text,
+                            placement: .confirmationAction,
+                            isDisabled: sourceURL.isEmpty
+                        ) {
+                            saveAction()
+                        }
+                    } else {
+                        ProgressView()
+                    }
                 }
             }
         }
