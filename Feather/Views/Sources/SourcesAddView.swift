@@ -195,7 +195,8 @@ struct SourcesAddView: View {
 			for url in urls {
 				group.addTask {
 					await withCheckedContinuation { continuation in
-						dataService.fetch<ASRepository>(from: url) { (result: RepositoryDataHandler) in
+                        // تم إزالة <ASRepository> هنا لحل تحذير الـ Warning
+						dataService.fetch(from: url) { (result: RepositoryDataHandler) in
 							switch result {
 							case .success(let repo):
 								Task { @MainActor in
@@ -222,21 +223,20 @@ private extension View {
     @ViewBuilder
     func safeAddSourceToolbar(isImporting: Bool, sourceURL: String, saveAction: @escaping () -> Void) -> some View {
         self.toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                NBToolbarButton(role: .cancel)
-            }
+            // تم إزالة ToolbarItem لأن NBToolbarButton يتكفل بمكانه تلقائياً
+            NBToolbarButton(role: .cancel)
             
-            ToolbarItem(placement: .navigationBarTrailing) {
-                if !isImporting {
-                    NBToolbarButton(
-                        .localized("Save"),
-                        style: .text,
-                        placement: .confirmationAction,
-                        isDisabled: sourceURL.isEmpty
-                    ) {
-                        saveAction()
-                    }
-                } else {
+            if !isImporting {
+                NBToolbarButton(
+                    .localized("Save"),
+                    style: .text,
+                    placement: .navigationBarTrailing,
+                    isDisabled: sourceURL.isEmpty
+                ) {
+                    saveAction()
+                }
+            } else {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     ProgressView()
                 }
             }
