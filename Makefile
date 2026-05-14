@@ -42,11 +42,11 @@ $(PLATFORMS): deps
 		-skipPackagePluginValidation \
 		CODE_SIGNING_ALLOWED=NO \
 		ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO \
-		IPHONEOS_DEPLOYMENT_TARGET=15.0 \
-		CONFIGURATION_BUILD_DIR="$(CURDIR)/_build/Applications"
+		IPHONEOS_DEPLOYMENT_TARGET=15.0
 
 	mkdir -p _build/Payload
-	cp -R _build/Applications/*.app _build/Payload/$(NAME).app
+	# 🔥 تم التعديل هنا لاصطياد التطبيق من مجلد Xcode الافتراضي بأمان
+	cp -R $(TMP)/$@/Build/Products/Release-*/*.app _build/Payload/$(NAME).app
 	chmod -R 0755 _build/Payload/$(NAME).app
 	codesign --force --sign - --timestamp=none _build/Payload/$(NAME).app
 	cp deps/* _build/Payload/$(NAME).app/ || true
