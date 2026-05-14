@@ -117,7 +117,8 @@ struct HomeView: View {
                     .listStyle(.insetGrouped)
                 }
             }
-            .navigationDestination(item: $_selectedRoute) { route in
+            // 🔥 تم التعديل هنا لتدعم iOS 15
+            .compatNavigationDestination(item: $_selectedRoute) { route in
                 SourceAppsDetailView(source: route.source, app: route.app)
             }
             .refreshable {
@@ -179,20 +180,42 @@ struct SourceAppRoute: Identifiable, Hashable {
     let id: String = UUID().uuidString
 }
 
-// MARK: - Extension for Navigation
+// MARK: - Extension for Navigation (iOS 15 & 16+ Compatible)
 extension View {
     @ViewBuilder
-    func navigationDestination<Item: Identifiable & Hashable, Destination: View>(
+    func compatNavigationDestination<Item: Identifiable & Hashable, Destination: View>(
         item: Binding<Item?>,
         @ViewBuilder destination: @escaping (Item) -> Destination
     ) -> some View {
-        self.navigationDestination(isPresented: Binding(
-            get: { item.wrappedValue != nil },
-            set: { if !$0 { item.wrappedValue = nil } }
-        )) {
-            if let selectedItem = item.wrappedValue {
-                destination(selectedItem)
+        if #available(iOS 16.0, *) {
+            // كود iOS 16 وما فوق
+            self.navigationDestination(isPresented: Binding(
+                get: { item.wrappedValue != nil },
+                set: { if !$0 { item.wrappedValue = nil } }
+            )) {
+                if let selectedItem = item.wrappedValue {
+                    destination(selectedItem)
+                }
             }
+        } else {
+            // 🔥 الحيلة السحرية لـ iOS 15 (NavigationLink مخفي)
+            self.background(
+                NavigationLink(
+                    isActive: Binding(
+                        get: { item.wrappedValue != nil },
+                        set: { if !$0 { item.wrappedValue = nil } }
+                    )
+                ) {
+                    if let selectedItem = item.wrappedValue {
+                        destination(selectedItem)
+                    } else {
+                        EmptyView()
+                    }
+                } label: {
+                    EmptyView()
+                }
+                .hidden()
+            )
         }
     }
 }
