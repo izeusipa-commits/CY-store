@@ -60,23 +60,16 @@ struct CertificatesView: View {
 				}
 			}
 		}
-		.toolbar {
-			if _bindingSelectedCert == nil {
-				NBToolbarButton(
-					systemImage: "plus",
-					style: .icon,
-					placement: .topBarTrailing
-				) {
-					_isAddingPresenting = true
-				}
-			}
-		}
+        // حل مشكلة buildIf للـ toolbar
+        .safeToolbar(show: _bindingSelectedCert == nil) {
+            _isAddingPresenting = true
+        }
 		.sheet(item: $_isSelectedInfoPresenting) { cert in
 			CertificatesInfoView(cert: cert)
 		}
 		.sheet(isPresented: $_isAddingPresenting) {
 			CertificatesAddView()
-				.presentationDetents([.medium])
+                .safePresentationDetents() // حل مشكلة presentationDetents
 		}
 		.alert(.localized("Change Nickname"), isPresented: $_isRenamingPresenting, presenting: _certToRename) { cert in
 			TextField(.localized("Nickname"), text: $_newNickname)
@@ -155,4 +148,33 @@ extension CertificatesView {
 			Storage.shared.revokagedCertificate(for: cert)
 		}
 	}
+}
+
+// MARK: - Compatibility Extensions
+private extension View {
+    @ViewBuilder
+    func safePresentationDetents() -> some View {
+        if #available(iOS 16.0, *) {
+            self.presentationDetents([.medium])
+        } else {
+            self
+        }
+    }
+    
+    @ViewBuilder
+    func safeToolbar(show: Bool, action: @escaping () -> Void) -> some View {
+        if show {
+            self.toolbar {
+                NBToolbarButton(
+                    systemImage: "plus",
+                    style: .icon,
+                    placement: .topBarTrailing
+                ) {
+                    action()
+                }
+            }
+        } else {
+            self
+        }
+    }
 }
