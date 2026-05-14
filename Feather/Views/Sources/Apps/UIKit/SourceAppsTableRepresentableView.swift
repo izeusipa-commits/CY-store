@@ -15,7 +15,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 	@Binding var searchText: String
 	@Binding var sortOption: SourceAppsView.SortOption
 	@Binding var sortAscending: Bool
-    @Binding var selectedCategory: SourceAppsView.AppCategory // إضافة متغير التصنيف
+    @Binding var selectedCategory: SourceAppsView.AppCategory
 	var onSelect: (SourceAppsView.SourceAppRoute) -> Void
 	
 	func makeUIView(context: Context) -> UITableView {
@@ -25,10 +25,11 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 		tableView.register(UITableViewCell.self, forCellReuseIdentifier: "AppCell")
 		tableView.register(UITableViewHeaderFooterView.self, forHeaderFooterViewReuseIdentifier: "SectionHeader")
 		
-		if #available(iOS 17, *) {
+		// تعديل التوافق لـ iOS 15
+		if #available(iOS 16, *) {
 			tableView.allowsSelection = true
 		} else {
-			tableView.allowsSelection = false
+			tableView.allowsSelection = true // السماح بالاختيار في iOS 15 أيضاً
 		}
 		
 		if
@@ -142,7 +143,6 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 	private func _calculateSortedApps() -> [(source: ASRepository, app: ASRepository.App)] {
         var baseApps = _allAppsWithSource
         
-        // 1. الفلترة حسب التصنيف باستخدام الكلمات المفتاحية الذكية
         if selectedCategory != .all {
             baseApps = baseApps.filter { entry in
                 let keywords: [String]
@@ -168,7 +168,6 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
             }
         }
         
-        // 2. الفلترة حسب البحث اليدوي
 		let filtered = baseApps.filter {
 			searchText.isEmpty ||
 				($0.app.name?.localizedCaseInsensitiveContains(searchText) ?? false) ||
@@ -177,7 +176,6 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 				($0.app.localizedDescription?.localizedCaseInsensitiveContains(searchText) ?? false)
 		}
 		
-        // 3. ترتيب التطبيقات
 		switch sortOption {
 		case .default:
 			_groupedAppsByDate = [:]
@@ -262,25 +260,42 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
 		}
 
-		cell.contentConfiguration = UIHostingConfiguration {
-			SourceAppsCellView(source: entry.source, app: entry.app)
+        // حل مشكلة التوافق مع iOS 15 هنا
+		if #available(iOS 16.0, *) {
+			cell.contentConfiguration = UIHostingConfiguration {
+				SourceAppsCellView(source: entry.source, app: entry.app)
+			}
+		} else {
+            // بديل iOS 15: استخدام UIHostingController يدوياً
+			let hostingController = UIHostingController(rootView: SourceAppsCellView(source: entry.source, app: entry.app))
+			hostingController.view.backgroundColor = .clear
+			
+			cell.contentView.subviews.forEach { $0.removeFromSuperview() }
+			let hostedView = hostingController.view!
+			hostedView.translatesAutoresizingMaskIntoConstraints = false
+			cell.contentView.addSubview(hostedView)
+			
+			NSLayoutConstraint.activate([
+				hostedView.topAnchor.constraint(equalTo: cell.contentView.topAnchor),
+				hostedView.bottomAnchor.constraint(equalTo: cell.contentView.bottomAnchor),
+				hostedView.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor),
+				hostedView.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor)
+			])
 		}
 		return cell
 	}
 	
 	func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-		if #available(iOS 17, *) {
-			tableView.deselectRow(at: indexPath, animated: true)
-			
-			let entry: (source: ASRepository, app: ASRepository.App)
-			switch sortOption {
-			case .default: entry = _sortedApps[indexPath.row]
-			case .name: entry = _groupedAppsByNameFirstLetter[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-			case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-			}
-			
-			onSelect(SourceAppsView.SourceAppRoute(source: entry.source, app: entry.app))
+		tableView.deselectRow(at: indexPath, animated: true)
+		
+		let entry: (source: ASRepository, app: ASRepository.App)
+		switch sortOption {
+		case .default: entry = _sortedApps[indexPath.row]
+		case .name: entry = _groupedAppsByNameFirstLetter[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
+		case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
 		}
+		
+		onSelect(SourceAppsView.SourceAppRoute(source: entry.source, app: entry.app))
 	}
 	
 	func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
@@ -292,13 +307,40 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		case .name, .date: title = _sortedSectionTitles[section]
 		}
 		
-		headerView?.contentConfiguration = UIHostingConfiguration {
-			HStack {
-				Text(verbatim: title)
-				Spacer()
+        // حل مشكلة التوافق مع iOS 15 للعناوين
+		if #available(iOS 16.0, *) {
+			headerView?.contentConfiguration = UIHostingConfiguration {
+				HStack {
+					Text(verbatim: title)
+					Spacer()
+				}
+				.font(.headline)
+				.padding(.vertical, 2)
 			}
-			.font(.headline)
-			.padding(.vertical, 2)
+		} else {
+            // بديل iOS 15 للعناوين
+			let hostingController = UIHostingController(rootView: 
+				HStack {
+					Text(verbatim: title)
+						.font(.headline)
+						.padding(.leading, 16)
+					Spacer()
+				}
+				.frame(maxWidth: .infinity, maxHeight: .infinity)
+				.background(Color(uiColor: .systemBackground))
+			)
+			hostingController.view.backgroundColor = .clear
+			headerView?.contentView.subviews.forEach { $0.removeFromSuperview() }
+			let hostedView = hostingController.view!
+			hostedView.translatesAutoresizingMaskIntoConstraints = false
+			headerView?.contentView.addSubview(hostedView)
+			
+			NSLayoutConstraint.activate([
+				hostedView.topAnchor.constraint(equalTo: headerView!.contentView.topAnchor),
+				hostedView.bottomAnchor.constraint(equalTo: headerView!.contentView.bottomAnchor),
+				hostedView.leadingAnchor.constraint(equalTo: headerView!.contentView.leadingAnchor),
+				hostedView.trailingAnchor.constraint(equalTo: headerView!.contentView.trailingAnchor)
+			])
 		}
 		
 		return headerView
@@ -311,6 +353,4 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 	func tableView(_ tableView: UITableView, sectionForSectionIndexTitle title: String, at index: Int) -> Int {
 		_sortedSectionTitles.firstIndex(of: title) ?? 0
 	}
-	
-    // تم حذف دالة contextMenuConfigurationForRowAt بالكامل لمنع ظهور قائمة النسخ والتنزيل عند الضغط مطولاً
 }}
