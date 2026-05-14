@@ -22,7 +22,7 @@ jobs:
 
       - name: Compile SY STORE
         run: | 
-          # 1. إصلاح خطأ الماك: إرجاع إصدار الماك إلى 13 المدعوم
+          # 1. إرجاع إصدار الماك إلى 13 المدعوم
           find . -name "Package.swift" -exec sed -i '' 's/\.macOS(\.v15)/\.macOS(\.v13)/g' {} + || true
           find . -name "Package.swift" -exec sed -i '' 's/\.macOS(\.v16)/\.macOS(\.v13)/g' {} + || true
           find . -name "Package.swift" -exec sed -i '' 's/\.macOS(\.v14)/\.macOS(\.v13)/g' {} + || true
@@ -30,6 +30,12 @@ jobs:
           # 2. تغيير إصدارات الآيفون والتلفاز فقط إلى 15 بشكل آمن
           find . -name "Package.swift" -exec sed -i '' 's/\.iOS(\.v1[0-9])/\.iOS(\.v15)/g' {} + || true
           find . -name "Package.swift" -exec sed -i '' 's/\.tvOS(\.v1[0-9])/\.tvOS(\.v15)/g' {} + || true
+
+          # 3. الإصلاحات التلقائية لأكواد iOS 16 في التطبيق الأساسي
+          find . -name "*.swift" -exec sed -i '' 's/URL\.documentsDirectory/FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!/g' {} + || true
+          find . -name "*.swift" -exec sed -i '' 's/\.scrollDismissesKeyboard(\.interactively)//g' {} + || true
+          find . -name "*.swift" -exec sed -i '' 's/\.contentTransition(\.numericText())//g' {} + || true
+          find . -name "*.swift" -exec sed -i '' 's/Image(systemName: "checkmark")\.bold()/Image(systemName: "checkmark").font(.body.weight(.bold))/g' {} + || true
           
           # تحديث رقم البناء بناءً على الـ Commit الحالي
           agvtool new-version -all $(git rev-parse HEAD)
