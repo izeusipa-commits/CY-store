@@ -62,7 +62,6 @@ struct LibraryView: View {
 	var body: some View {
 		NBNavigationView("التوقيع") {
             VStack(spacing: 0) {
-                // إظهار الأزرار العلوية بشكل ثابت
                 Picker("التصنيف", selection: $_selectedScope) {
                     ForEach(Scope.allCases, id: \.self) { scope in
                         Text(scope.displayName).tag(scope)
@@ -106,7 +105,7 @@ struct LibraryView: View {
                 }
             }
 			.searchable(text: $_searchText, placement: .platform(), prompt: "ابحث في التطبيقات...")
-			.scrollDismissesKeyboard(.interactively)
+			.safeScrollDismissesKeyboard() // توافق iOS 15
 			.overlay {
 				if
 					(_selectedScope == .signed && _filteredSignedApps.isEmpty) ||
@@ -130,7 +129,7 @@ struct LibraryView: View {
 				}
 			}
 			.toolbar {
-				ToolbarItem(placement: .topBarLeading) {
+				ToolbarItem(placement: .navigationBarLeading) { // تعديل لـ iOS 15
                     if _editMode.isEditing {
                         Button("تم", role: .cancel) {
                             _editMode = .inactive
@@ -140,7 +139,7 @@ struct LibraryView: View {
                     }
 				}
 				
-                ToolbarItemGroup(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .navigationBarTrailing) { // تعديل لـ iOS 15
                     if _editMode.isEditing {
                         Button {
                             _bulkDeleteSelectedApps()
@@ -174,8 +173,8 @@ struct LibraryView: View {
 			}
 			.sheet(item: $_selectedInstallAppPresenting) { app in
 				InstallPreviewView(app: app.base, isSharing: app.archive)
-					.presentationDetents([.height(200)])
-					.presentationDragIndicator(.visible)
+					.safePresentationDetents(height: 200) // توافق iOS 15
+					.safePresentationDragIndicator()     // توافق iOS 15
 			}
 			.fullScreenCover(item: $_selectedSigningAppPresenting) { app in
 				SigningView(app: app.base)
@@ -267,4 +266,34 @@ extension LibraryView {
 			}
 		}
 	}
+}
+
+// MARK: - Compatibility Extensions
+private extension View {
+    @ViewBuilder
+    func safePresentationDetents(height: CGFloat) -> some View {
+        if #available(iOS 16.0, *) {
+            self.presentationDetents([.height(height)])
+        } else {
+            self
+        }
+    }
+    
+    @ViewBuilder
+    func safePresentationDragIndicator() -> some View {
+        if #available(iOS 16.0, *) {
+            self.presentationDragIndicator(.visible)
+        } else {
+            self
+        }
+    }
+    
+    @ViewBuilder
+    func safeScrollDismissesKeyboard() -> some View {
+        if #available(iOS 16.0, *) {
+            self.scrollDismissesKeyboard(.interactively)
+        } else {
+            self
+        }
+    }
 }
