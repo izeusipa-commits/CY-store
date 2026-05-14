@@ -22,8 +22,14 @@ jobs:
 
       - name: Compile SY STORE
         run: | 
+          # البحث عن كل ملفات Package.swift في المشروع وتوحيد الإصدارات إلى 15 تلقائياً
+          find . -name "Package.swift" -exec sed -i '' 's/\.v16/\.v15/g' {} + || true
+          find . -name "Package.swift" -exec sed -i '' 's/\.v14/\.v15/g' {} + || true
+          find . -name "Package.swift" -exec sed -i '' 's/\.v12/\.v15/g' {} + || true
+          
           # تحديث رقم البناء بناءً على الـ Commit الحالي
           agvtool new-version -all $(git rev-parse HEAD)
+          
           # بدء عملية التجميع
           make
           mkdir upload
