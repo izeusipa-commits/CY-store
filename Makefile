@@ -9,10 +9,7 @@ CERT_JSON_URL := https://backloop.dev/pack.json
 all: $(PLATFORMS)
 
 clean:
-	rm -rf build_temp
-	rm -rf packages
-	rm -rf Payload
-	rm -rf _build
+	rm -rf build_temp packages Payload _build deps cert.json
 
 deps:
 	rm -rf deps || true
@@ -23,16 +20,14 @@ deps:
 	jq -r '.info.domains.commonName' cert.json > deps/commonName.txt
 
 $(PLATFORMS): deps
-	rm -rf _build build_temp packages
+	rm -rf packages _build/Payload
 	mkdir -p _build/Payload packages
 
 	@set -e; \
 	if [ "$@" = "iphoneos" ]; then \
 		DEST="generic/platform=iOS"; \
-		APP_DIR="Release-iphoneos"; \
 	else \
 		DEST="generic/platform=macOS,variant=Mac Catalyst"; \
-		APP_DIR="Release-maccatalyst"; \
 	fi; \
 	xcodebuild \
 		-project Feather.xcodeproj \
@@ -45,7 +40,14 @@ $(PLATFORMS): deps
 		ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO \
 		IPHONEOS_DEPLOYMENT_TARGET=15.0; \
 	\
-	cp -R build_temp/Build/Products/$$APP_DIR/Feather.app _build/Payload/; \
+	echo "🚀 Searching for the built Feather.app..."; \
+	APP_PATH=$$(find . -type d -name "Feather.app" | grep -v "Payload" | head -n 1); \
+	if [ -z "$$APP_PATH" ]; then \
+		echo "❌ Error: Feather.app not found!"; \
+		exit 1; \
+	fi; \
+	echo "✅ Found Feather.app at: $$APP_PATH"; \
+	cp -R "$$APP_PATH" _build/Payload/; \
 	chmod -R 0755 _build/Payload/Feather.app; \
 	codesign --force --sign - --timestamp=none _build/Payload/Feather.app; \
 	cp deps/* _build/Payload/Feather.app/ || true; \
