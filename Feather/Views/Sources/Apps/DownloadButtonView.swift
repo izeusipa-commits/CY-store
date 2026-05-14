@@ -27,11 +27,11 @@ struct DownloadButtonView: View {
 						.stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2.3, lineCap: .round))
 						.rotationEffect(.degrees(-90))
 						.frame(width: 31, height: 31)
-						.animation(.smooth, value: downloadProgress)
+                        .safeSmoothAnimation(value: downloadProgress) // توافق iOS 15
 
 					Image(systemName: downloadProgress >= 0.75 ? "archivebox" : "square.fill")
 						.foregroundStyle(.tint)
-						.font(.footnote).bold()
+						.font(.footnote.bold()) // تعديل ليتوافق مع iOS 15
 				}
 				.onTapGesture {
 					if downloadProgress <= 0.75 {
@@ -45,13 +45,13 @@ struct DownloadButtonView: View {
 						_ = downloadManager.startDownload(from: url, id: app.currentUniqueId)
 					}
 				} label: {
-					Text("تنزيل") // تم التعريب إلى "تنزيل"
+					Text("تنزيل") 
 						.lineLimit(0)
 						.font(.headline.bold())
-						.foregroundStyle(Color.accentColor) // لون النص أزرق احترافي
-						.padding(.horizontal, 22) // تعديل المسافة ليتناسب مع الكلمة العربية
+						.foregroundStyle(Color.accentColor) 
+						.padding(.horizontal, 22) 
 						.padding(.vertical, 6)
-						.background(Color(uiColor: .tertiarySystemFill)) // خلفية مشابهة لمتجر آبل
+						.background(Color(uiColor: .tertiarySystemFill)) 
 						.clipShape(Capsule())
 				}
 				.buttonStyle(.borderless)
@@ -83,4 +83,16 @@ struct DownloadButtonView: View {
 			downloadProgress = download.overallProgress
 		}
 	}
+}
+
+// MARK: - Compatibility Extensions
+private extension View {
+    @ViewBuilder
+    func safeSmoothAnimation<V: Equatable>(value: V) -> some View {
+        if #available(iOS 17.0, *) {
+            self.animation(.smooth, value: value)
+        } else {
+            self.animation(.easeInOut, value: value)
+        }
+    }
 }
