@@ -3,7 +3,7 @@
 //  SY STORE
 //
 //  Created by samara on 13.05.2026.
-//  Modified for SY STORE - Native Banners.
+//  Modified for SY STORE - Native Banners Auto-Scroll.
 //
 
 import SwiftUI
@@ -17,9 +17,15 @@ struct HomeView: View {
     
     @State private var _allApps: [(source: ASRepository, app: ASRepository.App)] = []
     @State private var _recentApps: [(source: ASRepository, app: ASRepository.App)] = []
-    @State private var _banners: [ASRepository.News] = [] // قراءة البنرات الأصلية للمتجر
+    @State private var _banners: [ASRepository.News] = []
     @State private var _selectedRoute: SourceAppRoute?
     @State private var isLoading = true
+
+    // 🔥 1. متغير لمعرفة رقم البنر المعروض حالياً
+    @State private var _currentBannerIndex = 0
+    
+    // 🔥 2. مؤقت زمني يشتغل كل 3.5 ثانية
+    private let bannerTimer = Timer.publish(every: 3.5, on: .main, in: .common).autoconnect()
 
     @FetchRequest(
         entity: AltSource.entity(),
@@ -45,21 +51,19 @@ struct HomeView: View {
                     }
                 } else {
                     List {
-                        // MARK: - قسم البنرات الإعلانية (Swipeable)
+                        // MARK: - قسم البنرات الإعلانية (Auto-Scroll)
                         if !_banners.isEmpty {
                             Section {
-                                TabView {
+                                // 🔥 3. ربط الـ TabView بالمتغير
+                                TabView(selection: $_currentBannerIndex) {
                                     ForEach(_banners.indices, id: \.self) { index in
                                         let banner = _banners[index]
                                         
                                         Button {
-                                            // 1. إذا كان البنر يحتوي على رابط، افتحه
                                             if let url = banner.url {
                                                 openURL(url)
-                                            } 
-                                            // 2. إذا كان البنر يوجه لتطبيق معين داخل المتجر، افتح التطبيق
-                                            else if let appID = banner.appID,
-                                                    let targetApp = _allApps.first(where: { $0.app.id == appID }) {
+                                            } else if let appID = banner.appID,
+                                                      let targetApp = _allApps.first(where: { $0.app.id == appID }) {
                                                 _selectedRoute = SourceAppRoute(source: targetApp.source, app: targetApp.app)
                                             }
                                         } label: {
@@ -85,6 +89,7 @@ struct HomeView: View {
                                             }
                                         }
                                         .buttonStyle(.plain)
+                                        .tag(index) // 🔥 4. إعطاء رقم (Tag) لكل بنر ليتمكن المؤقت من التعرف عليه
                                     }
                                 }
                                 .frame(height: 230)
@@ -92,6 +97,14 @@ struct HomeView: View {
                                 .listRowInsets(EdgeInsets())
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
+                                // 🔥 5. استقبال إشارة المؤقت لتقليب الصور
+                                .onReceive(bannerTimer) { _ in
+                                    if !_banners.isEmpty {
+                                        withAnimation(.easeInOut(duration: 0.5)) {
+                                            _currentBannerIndex = (_currentBannerIndex + 1) % _banners.count
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -117,7 +130,6 @@ struct HomeView: View {
                     .listStyle(.insetGrouped)
                 }
             }
-            // 🔥 تم التعديل هنا لتدعم iOS 15
             .compatNavigationDestination(item: $_selectedRoute) { route in
                 SourceAppsDetailView(source: route.source, app: route.app)
             }
@@ -142,31 +154,32 @@ struct HomeView: View {
             var allBanners: [ASRepository.News] = []
 
             for source in loadedSources {
-                // جلب التطبيقات
                 for app in source.apps {
                     allApps.append((source: source, app: app))
                 }
                 
-                // جلب البنرات الأصلية للسورس (News)
                 if let news = source.news {
                     allBanners.append(contentsOf: news)
                 }
             }
 
-            // ترتيب التطبيقات حسب التاريخ
             allApps.sort {
                 ($0.app.currentDate?.date ?? .distantPast) > ($1.app.currentDate?.date ?? .distantPast)
             }
 
             let topApps = Array(allApps.prefix(25))
-            
-            // تصفية البنرات التي تحتوي على صور فقط
             let validBanners = allBanners.filter { $0.imageURL != nil }
 
             DispatchQueue.main.async {
                 self._allApps = allApps
                 self._recentApps = topApps
                 self._banners = validBanners
+                
+                // إعادة تصفير المؤشر عند جلب بيانات جديدة
+                if self._currentBannerIndex >= validBanners.count {
+                    self._currentBannerIndex = 0
+                }
+                
                 self.isLoading = false
             }
         }
@@ -188,7 +201,6 @@ extension View {
         @ViewBuilder destination: @escaping (Item) -> Destination
     ) -> some View {
         if #available(iOS 16.0, *) {
-            // كود iOS 16 وما فوق
             self.navigationDestination(isPresented: Binding(
                 get: { item.wrappedValue != nil },
                 set: { if !$0 { item.wrappedValue = nil } }
@@ -198,7 +210,6 @@ extension View {
                 }
             }
         } else {
-            // 🔥 الحيلة السحرية لـ iOS 15 (NavigationLink مخفي)
             self.background(
                 NavigationLink(
                     isActive: Binding(
