@@ -29,15 +29,18 @@ class Download: Identifiable, @unchecked Sendable {
 	let url: URL
 	let fileName: String
 	let onlyArchiving: Bool
+    let autoSign: Bool // 🔥 إضافة خاصية التوقيع التلقائي
 	
 	init(
 		id: String,
 		url: URL,
-		onlyArchiving: Bool = false
+		onlyArchiving: Bool = false,
+        autoSign: Bool = false // 🔥 تمرير الخاصية
 	) {
 		self.id = id
 		self.url = url
 		self.onlyArchiving = onlyArchiving
+        self.autoSign = autoSign
 		self.fileName = url.lastPathComponent
 	}
 }
@@ -73,14 +76,15 @@ class DownloadManager: NSObject, ObservableObject {
 	
 	func startDownload(
 		from url: URL,
-		id: String = UUID().uuidString
+		id: String = UUID().uuidString,
+        autoSign: Bool = false // 🔥 تفعيل الخاصية عند بدء التحميل
 	) -> Download {
 		if let existingDownload = downloads.first(where: { $0.url == url }) {
 			resumeDownload(existingDownload)
 			return existingDownload
 		}
 		
-		let download = Download(id: id, url: url)
+		let download = Download(id: id, url: url, autoSign: autoSign)
 		
 		let task = _session.downloadTask(with: url)
 		download.task = task
@@ -173,7 +177,17 @@ extension DownloadManager: URLSessionDownloadDelegate {
 			if err != nil {
 				let generator = UINotificationFeedbackGenerator()
 				generator.notificationOccurred(.error)
-			}
+			} else {
+                // 🔥 هنا السحر: إذا نجح التحميل وكان التوقيع التلقائي مفعلاً، أرسل إشعاراً للنظام
+                if dl.autoSign {
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(
+                            name: Notification.Name("SYStore.AutoSignTriggered"),
+                            object: nil
+                        )
+                    }
+                }
+            }
 			
 			DispatchQueue.main.async {
 				if let index = DownloadManager.shared.getDownloadIndex(by: dl.id) {
