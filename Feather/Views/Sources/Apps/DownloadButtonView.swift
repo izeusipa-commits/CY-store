@@ -27,11 +27,11 @@ struct DownloadButtonView: View {
 						.stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2.3, lineCap: .round))
 						.rotationEffect(.degrees(-90))
 						.frame(width: 31, height: 31)
-                        .safeSmoothAnimation(value: downloadProgress) // توافق iOS 15
+                        .safeSmoothAnimation(value: downloadProgress)
 
 					Image(systemName: downloadProgress >= 0.75 ? "archivebox" : "square.fill")
 						.foregroundStyle(.tint)
-						.font(.footnote.bold()) // تعديل ليتوافق مع iOS 15
+						.font(.footnote.weight(.bold))
 				}
 				.onTapGesture {
 					if downloadProgress <= 0.75 {
@@ -42,12 +42,13 @@ struct DownloadButtonView: View {
 			} else {
 				Button {
 					if let url = app.currentDownloadUrl {
-						_ = downloadManager.startDownload(from: url, id: app.currentUniqueId)
+                        // 🔥 هنا أضفنا (autoSign: true) ليفهم النظام أننا نريد التوقيع التلقائي!
+						_ = downloadManager.startDownload(from: url, id: app.currentUniqueId, autoSign: true)
 					}
 				} label: {
 					Text("تنزيل") 
 						.lineLimit(0)
-						.font(.headline.bold())
+						.font(.headline.weight(.bold))
 						.foregroundStyle(Color.accentColor) 
 						.padding(.horizontal, 22) 
 						.padding(.vertical, 6)
