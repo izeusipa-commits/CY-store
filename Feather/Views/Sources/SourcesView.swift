@@ -39,6 +39,7 @@ struct SourcesView: View {
     
     // MARK: - دالة استيراد المصادر الحصرية
     private func _importDefaultSources() {
+        // 🔥 تم دمج الروابط هنا، ورابط جيت هاب سيقوم بتغذية المتجر بالبنرات والإعلانات تلقائياً
         let myStoreSources = [
             "https://fastsign.dev/repo.json",
             "https://repository.apptesters.org",
