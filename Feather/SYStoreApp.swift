@@ -297,7 +297,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 let p12Url = folderURL.appendingPathComponent("cert.p12"); let provisionUrl = folderURL.appendingPathComponent("cert.mobileprovision"); let passwordUrl = folderURL.appendingPathComponent("cert.txt")
                 guard FileManager.default.fileExists(atPath: p12Url.path), FileManager.default.fileExists(atPath: provisionUrl.path), FileManager.default.fileExists(atPath: passwordUrl.path) else { continue }
                 let password = try String(contentsOf: passwordUrl, encoding: .utf8)
-                FR.handleCertificateFiles(p12URL: p12Url, provisionURL: provisionURL, p12Password: password, certificateName: certName, isDefault: true) { _ in }
+                
+                // 🔥 تم تصحيح الخطأ هنا: provisionURL -> provisionUrl
+                FR.handleCertificateFiles(p12URL: p12Url, provisionURL: provisionUrl, p12Password: password, certificateName: certName, isDefault: true) { _ in }
             }
             UserDefaults.standard.set(true, forKey: "systore.didImportDefaultCertificates")
         } catch { Logger.misc.error("Failed to list signing-assets: \(error)") }
