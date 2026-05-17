@@ -3,7 +3,7 @@
 //  SY STORE
 //
 //  Created by samara on 10.04.2025.
-//  Modified for SY STORE.
+//  Modified for CY STORE - VIP Activation Info Added 👑.
 //
 
 import SwiftUI
@@ -39,6 +39,16 @@ struct SettingsView: View {
             Form {
                 _aboutSection()
                 
+                // 🔥 قسم معلومات التفعيل (VIP) الذي أضفناه
+                Section {
+                    NavigationLink(destination: ActivationInfoView()) {
+                        Label("معلومات التفعيل", systemImage: "person.text.rectangle.fill")
+                            .foregroundColor(.blue) // لون مميز للزر
+                    }
+                } footer: {
+                    Text("عرض تفاصيل الاشتراك والكود ومعرف الجهاز (UDID).")
+                }
+                
                 Section {
                     NavigationLink(destination: AppearanceView()) {
                         Label("المظهر", systemImage: "paintbrush")
@@ -65,7 +75,6 @@ struct SettingsView: View {
                     NavigationLink(destination: ConfigurationView()) {
                         Label("خيارات التوقيع", systemImage: "signature")
                     }
-                    // تم إزالة خيار "الضغط والأرشفة" من هنا بناءً على طلبك
                     NavigationLink(destination: InstallationView()) {
                         Label("التثبيت", systemImage: "arrow.down.circle")
                     }
@@ -94,14 +103,13 @@ extension SettingsView {
                 Label {
                     Text("حول التطبيق")
                 } icon: {
-                    // 🔥 تم استبدال الأيقونة القديمة بصورتك عبر الإنترنت
                     AsyncImage(url: URL(string: "https://up6.cc/2026/05/177886610803681.jpeg")) { phase in
                         if let image = phase.image {
                             image
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: 26, height: 26) // حجم مناسب لقائمة الإعدادات
-                                .clipShape(RoundedRectangle(cornerRadius: 6)) // حواف ناعمة
+                                .frame(width: 26, height: 26)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
                         } else if phase.error != nil {
                             Image(systemName: "info.circle.fill")
                                 .resizable()
@@ -115,5 +123,71 @@ extension SettingsView {
                 }
             }
         }
+    }
+}
+
+// MARK: - شاشة معلومات التفعيل (ActivationInfoView) 📱
+struct ActivationInfoView: View {
+    // جلب كود التفعيل المحفوظ في الجهاز
+    @AppStorage("activation_code") private var activationCode: String = "غير متوفر"
+    
+    // جلب معلومات الجهاز
+    let deviceName = UIDevice.current.name
+    let deviceUDID = UIDevice.current.identifierForVendor?.uuidString ?? "غير متوفر"
+    
+    var body: some View {
+        Form {
+            Section(header: Text("تفاصيل الاشتراك الحالي")) {
+                InfoRow(title: "كود التفعيل", value: activationCode.uppercased())
+                
+                InfoRow(title: "اسم الجهاز", value: deviceName)
+                
+                InfoRow(title: "UDID الجهاز", value: deviceUDID)
+            }
+            
+            // زر سريع لنسخ الـ UDID كحركة احترافية
+            Section {
+                Button(action: {
+                    UIPasteboard.general.string = deviceUDID
+                    
+                    // إعطاء اهتزاز خفيف للمشترك ليعرف أنه تم النسخ
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                }) {
+                    HStack {
+                        Image(systemName: "doc.on.doc.fill")
+                            .foregroundColor(.blue)
+                        Text("نسخ UDID الجهاز")
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
+                        Spacer()
+                    }
+                }
+            } footer: {
+                Text("سيتم نسخ المعرف الفريد الخاص بجهازك لتسهيل عملية الدعم الفني وتحديث الاشتراك.")
+            }
+        }
+        .navigationTitle("معلومات التفعيل")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - مكون مساعد لترتيب النصوص بشكل أنيق داخل معلومات التفعيل
+struct InfoRow: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Text(value)
+                .font(.body)
+                .fontWeight(.semibold)
+                .textSelection(.enabled) // تسمح للمشترك بنسخ النص عند الضغط المطول
+        }
+        .padding(.vertical, 4)
     }
 }
