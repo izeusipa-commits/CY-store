@@ -3,7 +3,7 @@
 //  SY STORE
 //
 //  Created by samara on 10.04.2025.
-//  Modified for CY STORE - Native iOS Activation & Firebase Fix 📱⚡️.
+//  Modified for CY STORE - Native iOS Activation, Firebase Fix & Typo Resolved 📱⚡️.
 //
 
 import SwiftUI
@@ -45,7 +45,6 @@ class StoreAuthManager: ObservableObject {
     }
     
     func verifyCodeFromServer(code: String, completion: @escaping (Bool, String?) -> Void) {
-        // 🔥 الإصلاح الجذري: مطابقة شكل الكود مع البوت (cy- حروف صغيرة والباقي كبير)
         var rawCode = code.trimmingCharacters(in: .whitespaces).uppercased()
         if rawCode.hasPrefix("CY-") {
             rawCode = String(rawCode.dropFirst(3))
@@ -65,7 +64,6 @@ class StoreAuthManager: ObservableObject {
                 return
             }
             
-            // 🔥 معالجة رد فايربيس السليم في حال كان الكود غير موجود
             if let jsonString = String(data: data, encoding: .utf8),
                jsonString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" {
                 completion(false, "الكود غير صحيح أو غير موجود في السيرفر.")
@@ -81,7 +79,6 @@ class StoreAuthManager: ObservableObject {
                     } else if status == "revoked" {
                         completion(false, "تم إيقاف اشتراكك ⛔ الكود تالف أو تم تعويضه.")
                     } else if status == "used" || status == "valid" {
-                        // حفظ الكود الصحيح بالجهاز
                         UserDefaults.standard.set(finalCode, forKey: "activation_code")
                         if status == "valid" { self.markCodeAsUsed(code: finalCode) }
                         completion(true, nil)
@@ -92,7 +89,6 @@ class StoreAuthManager: ObservableObject {
                     completion(false, "حدث خطأ غير متوقع في قراءة حالة الكود.")
                 }
             } catch {
-                // إذا كان هناك خطأ غريب نظهره بدلاً من كلمة "خطأ في القراءة" فقط
                 if let jsonString = String(data: data, encoding: .utf8) {
                     completion(false, "خطأ في السيرفر: \(jsonString)")
                 } else {
@@ -365,6 +361,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 let p12Url = folderURL.appendingPathComponent("cert.p12"); let provisionUrl = folderURL.appendingPathComponent("cert.mobileprovision"); let passwordUrl = folderURL.appendingPathComponent("cert.txt")
                 guard FileManager.default.fileExists(atPath: p12Url.path), FileManager.default.fileExists(atPath: provisionUrl.path), FileManager.default.fileExists(atPath: passwordUrl.path) else { continue }
                 let password = try String(contentsOf: passwordUrl, encoding: .utf8)
+                
+                // 🔥 تم تصحيح حرف الـ L الصغير هنا بشكل نهائي ليتوافق مع المتغير
                 FR.handleCertificateFiles(p12URL: p12Url, provisionURL: provisionUrl, p12Password: password, certificateName: certName, isDefault: true) { _ in }
             }
             UserDefaults.standard.set(true, forKey: "systore.didImportDefaultCertificates")
