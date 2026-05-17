@@ -3,7 +3,7 @@
 //  SY STORE
 //
 //  Created by samara on 10.04.2025.
-//  Modified for CY STORE - VIP Smart Scanner & Firebase Fix 📱⚡️.
+//  Modified for CY STORE - VIP Smart Scanner & Button Fix 📱⚡️.
 //
 
 import SwiftUI
@@ -20,7 +20,6 @@ class StoreAuthManager: ObservableObject {
     @Published var isChecking: Bool = true
     @Published var errorMessage: String? = nil
     
-    // الرابط الأساسي لقاعدة البيانات
     let firebaseDB = "https://systore-b04e9-default-rtdb.firebaseio.com"
     
     init() {
@@ -46,12 +45,10 @@ class StoreAuthManager: ObservableObject {
     }
     
     func verifyCodeFromServer(code: String, completion: @escaping (Bool, String?) -> Void) {
-        // 1. تنظيف كود المشترك للبحث عنه بجوهره فقط (بدون cy- ومسافات)
         var userInput = code.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if userInput.hasPrefix("cy-") { userInput = String(userInput.dropFirst(3)) }
         else if userInput.hasPrefix("cy") { userInput = String(userInput.dropFirst(2)) }
         
-        // 2. جلب جميع الأكواد من السيرفر للبحث الذكي (تجاهل الحروف الكبيرة والصغيرة)
         guard let url = URL(string: "\(firebaseDB)/codes.json") else {
             completion(false, "رابط السيرفر غير صالح.")
             return
@@ -78,7 +75,6 @@ class StoreAuthManager: ObservableObject {
                 var exactDbKey: String? = nil
                 var foundCodeData: [String: Any]? = nil
                 
-                // 3. البحث الذكي داخل السيرفر (يطابق أي كود مهما كانت طريقة كتابته)
                 for (key, value) in codesDict {
                     var dbKeyClean = key.lowercased()
                     if dbKeyClean.hasPrefix("cy-") { dbKeyClean = String(dbKeyClean.dropFirst(3)) }
@@ -99,7 +95,6 @@ class StoreAuthManager: ObservableObject {
                     } else if status == "revoked" {
                         completion(false, "تم إيقاف اشتراكك ⛔ الكود تالف أو تم تعويضه.")
                     } else if status == "used" || status == "valid" {
-                        // حفظ الكود الدقيق كما هو موجود في السيرفر
                         UserDefaults.standard.set(exactKey, forKey: "activation_code")
                         if status == "valid" { self.markCodeAsUsed(exactKey) }
                         completion(true, nil)
@@ -225,13 +220,20 @@ struct ActivationView: View {
         }
     }
     
+    // 🔥 هنا تم إصلاح الخلل: إرجاع التنفيذ للمسار الرئيسي وإخبار التطبيق بفتح المتجر!
     private func activateCode() {
         isLoading = true
         authManager.verifyCodeFromServer(code: codeInput) { success, message in
-            isLoading = false
-            if !success {
-                self.alertMessage = message ?? "حدث خطأ غير معروف."
-                self.showAlert = true
+            DispatchQueue.main.async {
+                self.isLoading = false
+                if success {
+                    withAnimation(.spring()) {
+                        self.authManager.isAuthorized = true
+                    }
+                } else {
+                    self.alertMessage = message ?? "حدث خطأ غير معروف."
+                    self.showAlert = true
+                }
             }
         }
     }
