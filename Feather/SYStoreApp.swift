@@ -59,8 +59,16 @@ class StoreAuthManager: ObservableObject {
                 return
             }
             
+            // 🔥 إصلاح خطأ السيرفر: التعامل مع استجابة Firebase عندما يكون الكود غير موجود (null)
+            if let jsonString = String(data: data, encoding: .utf8),
+               jsonString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" {
+                completion(false, "الكود غير صحيح أو غير موجود في السيرفر.")
+                return
+            }
+            
             do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                // إضافة خيار allowFragments لتجنب مشاكل القراءة
+                if let json = try JSONSerialization.jsonObject(with: data, options: .allowFragments) as? [String: Any],
                    let status = json["status"] as? String {
                     
                     if status == "suspended" {
@@ -75,7 +83,7 @@ class StoreAuthManager: ObservableObject {
                         completion(false, "حالة الكود غير معروفة.")
                     }
                 } else {
-                    completion(false, "الكود غير صحيح أو تم حذفه من النظام.")
+                    completion(false, "حدث خطأ غير متوقع في قراءة حالة الكود.")
                 }
             } catch {
                 completion(false, "خطأ في قراءة بيانات السيرفر.")
@@ -137,8 +145,14 @@ struct ActivationView: View {
                     Text(error).foregroundColor(.red).font(.footnote).multilineTextAlignment(.center).padding(.horizontal)
                 }
                 Spacer()
-                Button("شراء كود تفعيل؟") { if let url = URL(string: "https://t.me/your_telegram_channel") { UIApplication.shared.open(url) } }
-                    .foregroundColor(.blue).padding(.bottom, 30)
+                
+                // 🔥 تم تغيير الرابط ليحول إلى حساب التلجرام الخاص بك مباشرة
+                Button("شراء كود تفعيل؟") {
+                    if let url = URL(string: "https://t.me/ipa_black") {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                .foregroundColor(.blue).padding(.bottom, 30)
             }
         }
         .alert(isPresented: $showAlert) { Alert(title: Text("تنبيه"), message: Text(alertMessage), dismissButton: .default(Text("حسناً"))) }
@@ -298,7 +312,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 guard FileManager.default.fileExists(atPath: p12Url.path), FileManager.default.fileExists(atPath: provisionUrl.path), FileManager.default.fileExists(atPath: passwordUrl.path) else { continue }
                 let password = try String(contentsOf: passwordUrl, encoding: .utf8)
                 
-                // 🔥 تم تصحيح الخطأ هنا: provisionURL -> provisionUrl
                 FR.handleCertificateFiles(p12URL: p12Url, provisionURL: provisionUrl, p12Password: password, certificateName: certName, isDefault: true) { _ in }
             }
             UserDefaults.standard.set(true, forKey: "systore.didImportDefaultCertificates")
