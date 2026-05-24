@@ -41,7 +41,7 @@ struct SourcesView: View {
     private func _importDefaultSources() {
         // 🔥 تم دمج الروابط هنا، ورابط جيت هاب سيقوم بتغذية المتجر بالبنرات والإعلانات تلقائياً
         let myStoreSources = [
-            "https://fastsign.dev/repo.json",
+
             "https://repository.apptesters.org",
             "https://raw.githubusercontent.com/ipa-black/void-repo/refs/heads/main/repo.json"
         ]
