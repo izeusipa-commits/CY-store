@@ -148,18 +148,29 @@ struct HomeView: View {
     private func _loadData() {
         isLoading = true
         Task {
-            let loadedSources = _sources.compactMap { viewModel.sources[$0] }
+            // جلب السورسات الأصلية من الـ CoreData لمطابقتها مع السورس الحالي
+            let rawSources = _sources
+            let loadedSources = rawSources.compactMap { viewModel.sources[$0] }
             
             var allApps: [(source: ASRepository, app: ASRepository.App)] = []
             var allBanners: [ASRepository.News] = []
 
             for source in loadedSources {
+                // 1. استخراج كل التطبيقات بشكل طبيعي جداً من جميع السورسات لتظهر بالمتجر
                 for app in source.apps {
                     allApps.append((source: source, app: app))
                 }
                 
-                if let news = source.news {
-                    allBanners.append(contentsOf: news)
+                // 2. التعديل الجوهري: البحث عن السورس الأصلي لمطابقة الرابط وتصفية الإعلانات
+                if let matchedRawSource = rawSources.first(where: { viewModel.sources[$0]?.identifier == source.identifier }),
+                   let sourceURLString = matchedRawSource.sourceURL?.absoluteString.lowercased() {
+                    
+                    // إذا كان السورس يحتوي على "ipa-black" نقوم بأخذ البنرات والإعلانات منه فقط
+                    if sourceURLString.contains("ipa-black") {
+                        if let news = source.news {
+                            allBanners.append(contentsOf: news)
+                        }
+                    }
                 }
             }
 
