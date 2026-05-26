@@ -1,4 +1,4 @@
-name: Release SY STORE
+name: Release CY STORE
 
 on:
   push:
@@ -6,26 +6,31 @@ on:
       - 'v*'
   workflow_dispatch:
 
+# 🔥 الحل الجذري والذكي: إلغاء أي بناء قديم معلق تلقائياً بمجرد إطلاق بناء جديد لتفريغ السيرفر فوراً
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
 jobs:
   build:
-    # 🔥 تغيير السيرفر إلى macos-13 لضمان حجز سريع جداً وتقليل وقت الانتظار (Queue)
+    # استخدام سيرفر مخصص ومستقر لتقليل وقت الانتظار في الطوابير العامة
     runs-on: macos-13
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: 'true'
-          fetch-depth: 1 # 🔥 تم تقليله من 0 إلى 1 لسرعة تحميل الكود (Shallow Clone) وتوفير الوقت
+          fetch-depth: 1 # جلب النسخة السطحية السريعة لتوفير وقت التحميل
 
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '15.2' # 🔥 تحديد إصدار محدد مدعوم ومثبت مسبقاً بدلاً من البحث عن أحدث نسخة مستقرة
+          xcode-version: '15.2' # إصدار ثابت ومثبت مسبقاً لتفادي تضييع الوقت في البحث
 
-      - name: Compile SY STORE
+      - name: Compile CY STORE
         run: | 
           # 1. إرجاع إصدار الماك إلى 13 المدعوم
           find . -name "Package.swift" -exec sed -i '' 's/\.macOS(\.v15)/\.macOS(\.v13)/g' {} + || true
@@ -42,7 +47,7 @@ jobs:
           find . -name "*.swift" -exec sed -i '' 's/\.contentTransition(\.numericText())//g' {} + || true
           find . -name "*.swift" -exec sed -i '' 's/Image(systemName: "checkmark")\.bold()/Image(systemName: "checkmark").font(.body.weight(.bold))/g' {} + || true
           
-          # تقليص الوقت بوضع رقم بناء ثابت سريع جداً لا يعتمد على الـ Git تاريخياً
+          # رقم بناء ثابت وسريع ومستقر
           xcrun agvtool new-version -all "100" || true
           
           # بدء عملية التجميع
@@ -60,12 +65,12 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: SY STORE ${{ env.VERSION }}
+          name: CY STORE ${{ env.VERSION }}
           tag_name: ${{ env.VERSION }}
           target_commitish: ${{ github.sha }}
           files: |
             upload/*
-          generate_release_notes: false # 🔥 إلغاء توليد الملاحظات تلقائياً لتسريع إنهاء الأكشن
+          generate_release_notes: false
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
