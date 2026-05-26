@@ -3,7 +3,7 @@
 //  SY STORE
 //
 //  Created by samara on 13.05.2026.
-//  Modified for SY STORE - Native Banners Auto-Scroll.
+//  Modified for SY STORE - Native Banners & Sorted Recent Apps with Count.
 //
 
 import SwiftUI
@@ -20,6 +20,9 @@ struct HomeView: View {
     @State private var _banners: [ASRepository.News] = []
     @State private var _selectedRoute: SourceAppRoute?
     @State private var isLoading = true
+
+    // 🔥 متغير لحفظ عدد التطبيقات المضافة حديثاً ديناميكياً
+    @State private var _recentAppsCount = 0
 
     // 🔥 1. متغير لمعرفة رقم البنر المعروض حالياً
     @State private var _currentBannerIndex = 0
@@ -51,7 +54,7 @@ struct HomeView: View {
                     }
                 } else {
                     List {
-                        // MARK: - قسم البنرات الإعلانية (Auto-Scroll)
+                        // MARK: - قسم البنرات الإعلانية (Auto-Scroll من ipa-black فقط)
                         if !_banners.isEmpty {
                             Section {
                                 // 🔥 3. ربط الـ TabView بالمتغير
@@ -108,7 +111,7 @@ struct HomeView: View {
                             }
                         }
 
-                        // MARK: - قسم أحدث التطبيقات
+                        // MARK: - قسم أحدث التطبيقات فرز حسب الإضافة مع العدد
                         if !_recentApps.isEmpty {
                             Section {
                                 ForEach(_recentApps, id: \.app.currentUniqueId) { item in
@@ -120,10 +123,22 @@ struct HomeView: View {
                                     .buttonStyle(.plain)
                                 }
                             } header: {
-                                Text("أحدث الإضافات")
-                                    .font(.title3.bold())
-                                    .foregroundColor(.primary)
-                                    .padding(.top, 5)
+                                HStack(spacing: 6) {
+                                    Text("أحدث الإضافات")
+                                        .font(.title3.bold())
+                                        .foregroundColor(.primary)
+                                    
+                                    // شارة رقمية (Badge) تعرض عدد التطبيقات الحديثة بشكل مرتب
+                                    Text("\(_recentAppsCount)")
+                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 2)
+                                        .background(Color.accentColor.opacity(0.15))
+                                        .foregroundColor(.accentColor)
+                                        .clipShape(Capsule())
+                                }
+                                .padding(.top, 5)
+                                .textCase(nil) // يمنع تحويل النص الإنجليزي لحروف كبيرة في الهيدر تلقائياً
                             }
                         }
                     }
@@ -144,11 +159,10 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - جلب البيانات (التطبيقات والبنرات) معاً
+    // MARK: - جلب البيانات وتصفيتها وفرزها
     private func _loadData() {
         isLoading = true
         Task {
-            // جلب السورسات الأصلية من الـ CoreData لمطابقتها مع السورس الحالي
             let rawSources = _sources
             let loadedSources = rawSources.compactMap { viewModel.sources[$0] }
             
@@ -156,16 +170,15 @@ struct HomeView: View {
             var allBanners: [ASRepository.News] = []
 
             for source in loadedSources {
-                // 1. استخراج كل التطبيقات بشكل طبيعي جداً من جميع السورسات لتظهر بالمتجر
+                // جلب كل التطبيقات
                 for app in source.apps {
                     allApps.append((source: source, app: app))
                 }
                 
-                // 2. التعديل الجوهري: البحث عن السورس الأصلي لمطابقة الرابط وتصفية الإعلانات
+                // جلب الإعلانات من سورس ipa-black فقط
                 if let matchedRawSource = rawSources.first(where: { viewModel.sources[$0]?.identifier == source.identifier }),
                    let sourceURLString = matchedRawSource.sourceURL?.absoluteString.lowercased() {
                     
-                    // إذا كان السورس يحتوي على "ipa-black" نقوم بأخذ البنرات والإعلانات منه فقط
                     if sourceURLString.contains("ipa-black") {
                         if let news = source.news {
                             allBanners.append(contentsOf: news)
@@ -174,10 +187,14 @@ struct HomeView: View {
                 }
             }
 
-            allApps.sort {
-                ($0.app.currentDate?.date ?? .distantPast) > ($1.app.currentDate?.date ?? .distantPast)
+            // 🔥 فرز التطبيقات بدقة بناءً على تاريخ الإضافة الأحدث للـ سورس الحالي أولاً
+            allApps.sort { firstItem, secondItem in
+                let firstDate = firstItem.app.currentDate?.date ?? .distantPast
+                let secondDate = secondItem.app.currentDate?.date ?? .distantPast
+                return firstDate > secondDate
             }
 
+            // اقتطاع أول 25 تطبيق حديث لعرضهم بالقائمة الرئيسية
             let topApps = Array(allApps.prefix(25))
             let validBanners = allBanners.filter { $0.imageURL != nil }
 
@@ -186,7 +203,10 @@ struct HomeView: View {
                 self._recentApps = topApps
                 self._banners = validBanners
                 
-                // إعادة تصفير المؤشر عند جلب بيانات جديدة
+                // تحديث عدّاد التطبيقات المعروضة حديثاً ديناميكياً
+                self._recentAppsCount = topApps.count
+                
+                // إعادة تصفير مؤشر البنرات إذا تغير العدد
                 if self._currentBannerIndex >= validBanners.count {
                     self._currentBannerIndex = 0
                 }
