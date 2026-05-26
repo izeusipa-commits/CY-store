@@ -39,13 +39,10 @@ struct SourcesView: View {
     // MARK: - دالة استيراد المصادر 
     private func _importDefaultSources() {
         let myStoreSources = [
-            // === السورسات الأساسية الخاصة بيك ===
+            // === المصادر المعتمدة للمتجر ===
             "https://repository.apptesters.org",
             "https://raw.githubusercontent.com/ipa-black/void-repo/refs/heads/main/repo.json",
-            
-            // === السورسات العربية الإضافية (تتحدث باستمرار) ===
-            // سورس المطور فؤاد راغب (الأساسي لنسخ Watusi, BHTwitter, وغيرها)
-            "https://apt.fouadraheb.com/altstore/repo.json"
+            "https://community-apps.sidestore.io/sidecommunity.json"
         ]
         
         for source in myStoreSources {
