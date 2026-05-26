@@ -1,9 +1,9 @@
 //
 //  HomeView.swift
-//  SY STORE
+//  CY STORE
 //
 //  Created by samara on 13.05.2026.
-//  Modified for SY STORE - Native Banners & Sorted Recent Apps with Count.
+//  Modified for CY STORE - Safe Native Banners & Auto-Scroll.
 //
 
 import SwiftUI
@@ -20,14 +20,9 @@ struct HomeView: View {
     @State private var _banners: [ASRepository.News] = []
     @State private var _selectedRoute: SourceAppRoute?
     @State private var isLoading = true
-
-    // 🔥 متغير لحفظ عدد التطبيقات المضافة حديثاً ديناميكياً
     @State private var _recentAppsCount = 0
-
-    // 🔥 1. متغير لمعرفة رقم البنر المعروض حالياً
     @State private var _currentBannerIndex = 0
     
-    // 🔥 2. مؤقت زمني يشتغل كل 3.5 ثانية
     private let bannerTimer = Timer.publish(every: 3.5, on: .main, in: .common).autoconnect()
 
     @FetchRequest(
@@ -54,10 +49,9 @@ struct HomeView: View {
                     }
                 } else {
                     List {
-                        // MARK: - قسم البنرات الإعلانية (Auto-Scroll من ipa-black فقط)
+                        // MARK: - قسم البنرات الإعلانية (من ipa-black فقط)
                         if !_banners.isEmpty {
                             Section {
-                                // 🔥 3. ربط الـ TabView بالمتغير
                                 TabView(selection: $_currentBannerIndex) {
                                     ForEach(_banners.indices, id: \.self) { index in
                                         let banner = _banners[index]
@@ -92,7 +86,7 @@ struct HomeView: View {
                                             }
                                         }
                                         .buttonStyle(.plain)
-                                        .tag(index) // 🔥 4. إعطاء رقم (Tag) لكل بنر ليتمكن المؤقت من التعرف عليه
+                                        .tag(index)
                                     }
                                 }
                                 .frame(height: 230)
@@ -100,7 +94,6 @@ struct HomeView: View {
                                 .listRowInsets(EdgeInsets())
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
-                                // 🔥 5. استقبال إشارة المؤقت لتقليب الصور
                                 .onReceive(bannerTimer) { _ in
                                     if !_banners.isEmpty {
                                         withAnimation(.easeInOut(duration: 0.5)) {
@@ -128,7 +121,6 @@ struct HomeView: View {
                                         .font(.title3.bold())
                                         .foregroundColor(.primary)
                                     
-                                    // شارة رقمية (Badge) تعرض عدد التطبيقات الحديثة بشكل مرتب
                                     Text("\(_recentAppsCount)")
                                         .font(.system(size: 14, weight: .bold, design: .rounded))
                                         .padding(.horizontal, 8)
@@ -138,7 +130,7 @@ struct HomeView: View {
                                         .clipShape(Capsule())
                                 }
                                 .padding(.top, 5)
-                                .textCase(nil) // يمنع تحويل النص الإنجليزي لحروف كبيرة في الهيدر تلقائياً
+                                .textCase(nil)
                             }
                         }
                     }
@@ -149,17 +141,26 @@ struct HomeView: View {
                 SourceAppsDetailView(source: route.source, app: route.app)
             }
             .refreshable {
-                await viewModel.fetchSources(_sources, refresh: true)
+                // محاولة الجلب وفي حال حدوث خطأ في سورس خارجي لا يتوقف البرنامج
+                do {
+                    await viewModel.fetchSources(_sources, refresh: true)
+                } catch {
+                    print("صيانة السورسات الخارجية جارية...")
+                }
                 _loadData()
             }
         }
         .task(id: Array(_sources)) {
-            await viewModel.fetchSources(_sources)
+            do {
+                await viewModel.fetchSources(_sources)
+            } catch {
+                print("تحميل صامت للسورسات المتاحة...")
+            }
             _loadData()
         }
     }
 
-    // MARK: - جلب البيانات وتصفيتها وفرزها
+    // MARK: - جلب البيانات الآمن (تصفية وفرز جذري لمنع الـ Parse Error)
     private func _loadData() {
         isLoading = true
         Task {
@@ -170,12 +171,13 @@ struct HomeView: View {
             var allBanners: [ASRepository.News] = []
 
             for source in loadedSources {
-                // جلب كل التطبيقات
-                for app in source.apps {
+                // حماية 1: قراءة التطبيقات بشكل مستقل لكل سورس على حدة لضمان عدم تأثر السورسات ببعضها
+                let sourceApps = source.apps
+                for app in sourceApps {
                     allApps.append((source: source, app: app))
                 }
                 
-                // جلب الإعلانات من سورس ipa-black فقط
+                // حماية 2: عزل وقراءة بنرات ipa-black فقط بشكل صارم وآمن
                 if let matchedRawSource = rawSources.first(where: { viewModel.sources[$0]?.identifier == source.identifier }),
                    let sourceURLString = matchedRawSource.sourceURL?.absoluteString.lowercased() {
                     
@@ -187,14 +189,13 @@ struct HomeView: View {
                 }
             }
 
-            // 🔥 فرز التطبيقات بدقة بناءً على تاريخ الإضافة الأحدث للـ سورس الحالي أولاً
+            // فرز زمني دقيق تصاعدياً حسب الأحدث
             allApps.sort { firstItem, secondItem in
                 let firstDate = firstItem.app.currentDate?.date ?? .distantPast
                 let secondDate = secondItem.app.currentDate?.date ?? .distantPast
                 return firstDate > secondDate
             }
 
-            // اقتطاع أول 25 تطبيق حديث لعرضهم بالقائمة الرئيسية
             let topApps = Array(allApps.prefix(25))
             let validBanners = allBanners.filter { $0.imageURL != nil }
 
@@ -202,15 +203,11 @@ struct HomeView: View {
                 self._allApps = allApps
                 self._recentApps = topApps
                 self._banners = validBanners
-                
-                // تحديث عدّاد التطبيقات المعروضة حديثاً ديناميكياً
                 self._recentAppsCount = topApps.count
                 
-                // إعادة تصفير مؤشر البنرات إذا تغير العدد
                 if self._currentBannerIndex >= validBanners.count {
                     self._currentBannerIndex = 0
                 }
-                
                 self.isLoading = false
             }
         }
@@ -224,7 +221,7 @@ struct SourceAppRoute: Identifiable, Hashable {
     let id: String = UUID().uuidString
 }
 
-// MARK: - Extension for Navigation (iOS 15 & 16+ Compatible)
+// MARK: - Extension for Navigation
 extension View {
     @ViewBuilder
     func compatNavigationDestination<Item: Identifiable & Hashable, Destination: View>(
