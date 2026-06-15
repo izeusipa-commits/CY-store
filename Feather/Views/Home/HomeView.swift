@@ -160,27 +160,27 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - جلب البيانات الآمن (تصفية وفرز جذري لمنع الـ Parse Error)
+    // MARK: - جلب البيانات الآمن
     private func _loadData() {
         isLoading = true
         Task {
             let rawSources = _sources
-            let loadedSources = rawSources.compactMap { viewModel.sources[$0] }
             
             var allApps: [(source: ASRepository, app: ASRepository.App)] = []
             var allBanners: [ASRepository.News] = []
 
-            for source in loadedSources {
-                // حماية 1: قراءة التطبيقات بشكل مستقل لكل سورس على حدة لضمان عدم تأثر السورسات ببعضها
+            // التعديل: المرور على rawSources للوصول الآمن للمعلومات دون الحاجة لخاصية identifier
+            for rawSource in rawSources {
+                guard let source = viewModel.sources[rawSource] else { continue }
+                
+                // حماية 1: قراءة التطبيقات بشكل مستقل
                 let sourceApps = source.apps
                 for app in sourceApps {
                     allApps.append((source: source, app: app))
                 }
                 
-                // حماية 2: عزل وقراءة بنرات ipa-black فقط بشكل صارم وآمن
-                if let matchedRawSource = rawSources.first(where: { viewModel.sources[$0]?.identifier == source.identifier }),
-                   let sourceURLString = matchedRawSource.sourceURL?.absoluteString.lowercased() {
-                    
+                // حماية 2: عزل وقراءة بنرات ipa-black فقط
+                if let sourceURLString = rawSource.sourceURL?.absoluteString.lowercased() {
                     if sourceURLString.contains("ipa-black") {
                         if let news = source.news {
                             allBanners.append(contentsOf: news)
