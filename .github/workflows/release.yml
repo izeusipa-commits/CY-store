@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # مطلوب لـ agvtool وملاحظات الإصدار
+          fetch-depth: 0
           submodules: recursive
 
       - name: Use Xcode 26.2
@@ -31,12 +31,9 @@ jobs:
           fi
 
           echo "Modifying Info.plist at: $INFO_PLIST_PATH"
-
-          # استخدام plutil للتعديل الآمن لتفادي أخطاء عدم وجود المفتاح مسبقاً
           plutil -replace CFBundleDisplayName -string "ATTACK STORE" "$INFO_PLIST_PATH"
           plutil -replace CFBundleName -string "ATTACK STORE" "$INFO_PLIST_PATH"
           plutil -replace CFBundleIdentifier -string "app.attackstore" "$INFO_PLIST_PATH"
-
           echo "App name and Bundle ID updated successfully."
 
       - name: Set iOS 15 Deployment Target
@@ -44,20 +41,15 @@ jobs:
           INFO_PLIST_PATH="Feather/Resources/Info.plist"
           echo "Updating deployment targets to iOS 15.0..."
           
-          # 1. تحديث MinimumOSVersion في ملف Info.plist
+          # 1. تحديث MinimumOSVersion في ملف Info.plist بشكل آمن
           if [ -f "$INFO_PLIST_PATH" ]; then
             plutil -replace MinimumOSVersion -string "15.0" "$INFO_PLIST_PATH" || true
           fi
           
-          # 2. البحث عن ملفات إعدادات Xcode وتعديل الـ Deployment Target
-          find . -name "project.pbxproj" -exec sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = .*;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g' {} +
+          # 2. تحديث إعدادات Xcode ببحث دقيق يستهدف الأرقام فقط لمنع تدمير المتغيرات
+          find . -name "project.pbxproj" -exec sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g' {} +
           
-          # 3. تعديل الـ Makefile (إذا كان البناء يعتمد على Theos/Make)
-          if [ -f "Makefile" ]; then
-            sed -i '' 's/TARGET.*=.*/TARGET = iphone:clang:latest:15.0/g' Makefile || true
-          fi
-
-          # 4. تعديل Package.swift (إن وجدت حزم Swift مرتبطة)
+          # 3. تحديث Package.swift (إن وجد) بشكل دقيق
           if [ -f "Package.swift" ]; then
             sed -i '' 's/\.iOS(.v[0-9]*)/\.iOS(.v15)/g' Package.swift || true
           fi
@@ -68,25 +60,25 @@ jobs:
 
       - name: Build and Verify
         run: |
-          make iphoneos # استخدام make iphoneos كما في Workflow الأول
+          # تمرير إصدار iOS كمتغير بيئة مباشر لتجنب أي أخطاء من xcodebuild
+          export IPHONEOS_DEPLOYMENT_TARGET=15.0
+          make iphoneos
           mkdir -p upload
-          find . -name "*.ipa" -exec mv {} upload/ \; # نقل ملفات IPA إلى مجلد upload
-          test -n "$(find upload -name "*.ipa" -print -quit)" # التحقق من وجود ملف IPA
+          find . -name "*.ipa" -exec mv {} upload/ \;
+          test -n "$(find upload -name "*.ipa" -print -quit)"
 
       - name: Get Version from Info.plist
         id: get_version
         run: |
           INFO_PLIST_PATH="Feather/Resources/Info.plist"
-          # استخدام plutil لاستخراج رقم الإصدار بشكل آمن ونظيف
           VERSION=$(plutil -extract CFBundleShortVersionString raw "$INFO_PLIST_PATH" 2>/dev/null || echo "1.0.0")
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Create GitHub Release Directly
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # استخدام GITHUB_TOKEN المتاح تلقائياً
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           LATEST_OFFICIAL_TAG=$(git ls-remote --tags --refs origin "v*" | awk -F/ '{print $3}' | sort -V | tail -1 || echo "")
-
           COMMIT_MSG=$(git log -1 --pretty=%B)
 
           NOTES="## Commit: \`$COMMIT_MSG\` (${{ github.sha }})"
@@ -97,10 +89,8 @@ jobs:
             NOTES+=$'\n'"### Initial beta build"
           fi
 
-          # ✅ حل مشكلة التاج: جعلنا التاج يتغير تلقائياً في كل مرة بناء لتفادي الحظر
           NEW_TAG="beta-${{ github.run_number }}"
 
-          # إنشاء إصدار جديد باستخدام gh CLI
           gh release create "$NEW_TAG" "upload/*.ipa" \
             --title "ATTACK STORE v${{ env.VERSION }}" \
             --notes "$NOTES" \
