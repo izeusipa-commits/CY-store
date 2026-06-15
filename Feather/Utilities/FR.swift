@@ -124,7 +124,9 @@ enum FR {
 	
 	static func movePairing(_ url: URL) {
 		let fileManager = FileManager.default
-		let dest = URL.documentsDirectory.appendingPathComponent("pairingFile.plist")
+        // التعديل: استخدام الطريقة المتوافقة مع iOS 15 للوصول إلى مجلد المستندات
+        let documentDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+		let dest = documentDirectory.appendingPathComponent("pairingFile.plist")
 		
 		try? fileManager.removeFileIfNeeded(at: dest)
 		
